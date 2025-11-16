@@ -26,7 +26,7 @@ interface Category {
   id: string;
   name: string;
   terms: Term[];
-  subcategories?: Subcategory[];
+  // subcategories?: Subcategory[]; // Removed: we no longer support subcategories
 }
 
 interface Project {
@@ -154,7 +154,7 @@ const Index = () => {
         id: Date.now().toString(),
         name: newCategoryName.trim(),
         terms: [],
-        subcategories: [],
+        // subcategories: [], // Removed: no subcategories
       };
       setProjects(
         projects.map((p) =>
@@ -267,6 +267,88 @@ const Index = () => {
       )
     );
     toast.success(t('subcategoryDeleted'));
+  };
+
+  // Rename Category
+  const handleRenameCategory = (categoryId: string, newName: string) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId ? { ...cat, name: newName } : cat
+              ),
+            }
+          : p
+      )
+    );
+  };
+
+  // Edit term in main category
+  const handleEditTerm = (categoryId: string, oldText: string, newText: string, newImage?: string) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? {
+                      ...cat,
+                      terms: cat.terms.map((t) =>
+                        t.text === oldText ? { text: newText, image: newImage } : t
+                      ),
+                    }
+                  : cat
+              ),
+            }
+          : p
+      )
+    );
+    // update selection if term text changed
+    if (oldText !== newText) {
+      setSelectedTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
+    }
+  };
+
+  // Edit term inside a subcategory
+  const handleEditTermInSubcategory = (
+    categoryId: string,
+    subcategoryId: string,
+    oldText: string,
+    newText: string,
+    newImage?: string
+  ) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? {
+                      ...cat,
+                      subcategories: (cat.subcategories || []).map((sub) =>
+                        sub.id === subcategoryId
+                          ? {
+                              ...sub,
+                              terms: sub.terms.map((t) =>
+                                t.text === oldText ? { text: newText, image: newImage } : t
+                              ),
+                            }
+                          : sub
+                      ),
+                    }
+                  : cat
+              ),
+            }
+          : p
+      )
+    );
+    if (oldText !== newText) {
+      setSelectedTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
+    }
   };
 
   const handleAddTermToSubcategory = (
@@ -383,6 +465,29 @@ const Index = () => {
     toast.success(t('allDataCleared'));
   };
 
+  // Load from file-based storage on mount (if available)
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await fetch('/api/data');
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && Array.isArray(data.projects)) {
+            setProjects(data.projects as Project[]);
+          }
+          if (typeof data.activeProjectId === 'string') {
+            setActiveProjectId(data.activeProjectId);
+          }
+          if (Array.isArray(data.selectedTerms)) {
+            setSelectedTerms(data.selectedTerms as string[]);
+          }
+        }
+      } catch (e) {
+        // ignore if not available
+      }
+    })();
+  }, []);
+
   // Auto-save changes to localStorage when enabled
   useEffect(() => {
     const autoSaveEnabled = localStorage.getItem("autoSave") !== "false";
@@ -398,6 +503,26 @@ const Index = () => {
     } catch (e) {
       console.error("AutoSave failed", e);
     }
+  }, [projects, selectedTerms, activeProjectId]);
+
+  // Save to file-based storage when things change
+  useEffect(() => {
+    (async () => {
+      try {
+        const payload = {
+          projects,
+          activeProjectId,
+          selectedTerms,
+        };
+        await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch (e) {
+        // ignore in dev
+      }
+    })();
   }, [projects, selectedTerms, activeProjectId]);
 
   return (
@@ -447,15 +572,17 @@ const Index = () => {
                 >
                   {project.name}
                   {projects.length > 1 && (
-                    <button
+                    <span
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeleteProjectDialog({ open: true, projectId: project.id });
                       }}
-                      className="ml-2 hover:text-destructive"
+                      className="ml-2 hover:text-destructive cursor-pointer inline-flex items-center"
+                      role="button"
+                      aria-label={t('deleteProject')}
                     >
                       <Trash2 className="h-3 w-3" />
-                    </button>
+                    </span>
                   )}
                 </TabsTrigger>
               ))}
@@ -580,10 +707,13 @@ const Index = () => {
           onRemoveTerm={handleRemoveTerm}
           onSelectTerm={handleSelectTerm}
           selectedTerms={selectedTerms}
-          onAddSubcategory={handleAddSubcategory}
-          onDeleteSubcategory={handleDeleteSubcategory}
-          onAddTermToSubcategory={handleAddTermToSubcategory}
-          onRemoveTermFromSubcategory={handleRemoveTermFromSubcategory}
+          // onAddSubcategory={handleAddSubcategory} // Removed
+          // onDeleteSubcategory={handleDeleteSubcategory} // Removed
+          // onAddTermToSubcategory={handleAddTermToSubcategory} // Removed
+          // onRemoveTermFromSubcategory={handleRemoveTermFromSubcategory} // Removed
+          onRenameCategory={handleRenameCategory}
+          onEditTerm={handleEditTerm}
+          // onEditTermInSubcategory={handleEditTermInSubcategory} // Removed
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +15,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Image as ImageIcon, Link } from "lucide-react";
 import { CropImageDialog } from "./CropImageDialog";
 
-interface AddTermDialogProps {
+interface EditTermDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (term: string, image?: string) => void;
+  initialText: string;
+  initialImage?: string;
+  onSave: (newText: string, newImage?: string) => void;
 }
 
-export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps) => {
+export const EditTermDialog = ({ open, onOpenChange, initialText, initialImage, onSave }: EditTermDialogProps) => {
   const { t } = useTranslation();
-  const [term, setTerm] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [term, setTerm] = useState(initialText || "");
+  const [imageUrl, setImageUrl] = useState(initialImage || "");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -33,23 +35,22 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
   const [cropSrc, setCropSrc] = useState<string>("");
   const [tempObjectUrl, setTempObjectUrl] = useState<string | null>(null);
 
-  const resetForm = () => {
-    setTerm("");
-    setImageUrl("");
-    setImageFile(null);
-    if (tempObjectUrl) {
-      URL.revokeObjectURL(tempObjectUrl);
-      setTempObjectUrl(null);
+  useEffect(() => {
+    if (open) {
+      setTerm(initialText || "");
+      setImageUrl(initialImage || "");
+      setImageFile(null);
+      setCropOpen(false);
+      setCropSrc("");
+      if (tempObjectUrl) {
+        URL.revokeObjectURL(tempObjectUrl);
+        setTempObjectUrl(null);
+      }
     }
-    setCropOpen(false);
-    setCropSrc("");
-    onOpenChange(false);
-  };
+  }, [open, initialText, initialImage]);
 
-  const handleAdd = async () => {
+  const handleSave = async () => {
     if (term.trim()) {
-      let finalImage = imageUrl;
-
       if (imageFile) {
         try {
           setUploading(true);
@@ -58,18 +59,17 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
           const resp = await fetch("/api/upload", { method: "POST", body: formData });
           if (!resp.ok) throw new Error("Upload failed");
           const data = await resp.json();
-          onAdd(term.trim(), data.url as string);
-          resetForm();
+          onSave(term.trim(), data.url as string);
           setUploading(false);
+          onOpenChange(false);
           return;
         } catch (e) {
           setUploading(false);
           return;
         }
       }
-
-      onAdd(term.trim(), finalImage || undefined);
-      resetForm();
+      onSave(term.trim(), imageUrl || undefined);
+      onOpenChange(false);
     }
   };
 
@@ -107,7 +107,7 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{t('addTerm')}</DialogTitle>
+          <DialogTitle>{t('edit')}</DialogTitle>
           <DialogDescription className="text-muted-foreground">
             {t('addTermDescription')}
           </DialogDescription>
@@ -122,11 +122,11 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
               onChange={(e) => setTerm(e.target.value)}
               placeholder={t('termPlaceholder')}
               className="border-border bg-background"
-              onKeyPress={(e) => e.key === "Enter" && handleAdd()}
+              onKeyPress={(e) => e.key === "Enter" && handleSave()}
             />
           </div>
 
-          <Tabs defaultValue="url" className="w-full">
+          <Tabs defaultValue={imageFile ? 'upload' : 'url'} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-muted">
               <TabsTrigger value="url">
                 <Link className="h-4 w-4 mr-2" />
@@ -151,7 +151,6 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
                 placeholder="https://example.com/image.jpg"
                 className="border-border bg-background"
               />
-              {/* Hinweis: Zuschneiden wird automatisch für hochgeladene Dateien angeboten. Für externe URLs bitte Bild herunterladen und hochladen, um es zuzuschneiden. */}
               {imageUrl && (
                 <p className="text-xs text-muted-foreground">{t('cropHintUrl')}</p>
               )}
@@ -183,11 +182,11 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={resetForm} className="border-border">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="border-border">
             {t('cancel')}
           </Button>
-          <Button onClick={handleAdd} disabled={!term.trim() || uploading} className="bg-primary">
-            {t('add')}
+          <Button onClick={handleSave} disabled={!term.trim() || uploading} className="bg-primary">
+            {t('save')}
           </Button>
         </DialogFooter>
       </DialogContent>

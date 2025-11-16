@@ -8,25 +8,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, FolderPlus, Image as ImageIcon } from "lucide-react";
+import { Plus, Image as ImageIcon } from "lucide-react";
 import { AddTermDialog } from "./AddTermDialog";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { Input } from "@/components/ui/input";
 import { SubcategoryView } from "./SubcategoryView";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
-import { DraggableTermCard } from "./DraggableTermCard";
 import { DroppableSubcategoryCard } from "./DroppableSubcategoryCard";
 import { toast } from "sonner";
+import { DraggableTermCard } from "./DraggableTermCard";
+import { EditTermDialog } from "./EditTermDialog";
 
 interface Term {
   text: string;
   image?: string;
-}
-
-interface Subcategory {
-  id: string;
-  name: string;
-  terms: Term[];
 }
 
 interface CategoryDetailDialogProps {
@@ -36,16 +31,14 @@ interface CategoryDetailDialogProps {
     id: string;
     name: string;
     terms: Term[];
-    subcategories?: Subcategory[];
+    subcategories?: never; // removed
   };
   onAddTerm: (categoryId: string, term: string, image?: string) => void;
   onRemoveTerm: (categoryId: string, term: string) => void;
   onSelectTerm: (term: string) => void;
   selectedTerms: string[];
-  onAddSubcategory?: (categoryId: string, name: string) => void;
-  onDeleteSubcategory?: (categoryId: string, subcategoryId: string) => void;
-  onAddTermToSubcategory?: (categoryId: string, subcategoryId: string, term: string, image?: string) => void;
-  onRemoveTermFromSubcategory?: (categoryId: string, subcategoryId: string, term: string) => void;
+  onRenameCategory?: (categoryId: string, newName: string) => void;
+  onEditTerm?: (categoryId: string, oldText: string, newText: string, newImage?: string) => void;
 }
 
 export const CategoryDetailDialog = ({
@@ -56,120 +49,23 @@ export const CategoryDetailDialog = ({
   onRemoveTerm,
   onSelectTerm,
   selectedTerms,
-  onAddSubcategory,
-  onDeleteSubcategory,
-  onAddTermToSubcategory,
-  onRemoveTermFromSubcategory,
+  onRenameCategory,
+  onEditTerm,
 }: CategoryDetailDialogProps) => {
   const { t } = useTranslation();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showAddSubcategoryDialog, setShowAddSubcategoryDialog] = useState(false);
-  const [newSubcategoryName, setNewSubcategoryName] = useState("");
-  const [activeSubcategory, setActiveSubcategory] = useState<Subcategory | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     term?: string;
-    subcategoryId?: string;
   }>({ open: false });
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [editedCategoryName, setEditedCategoryName] = useState(category.name);
 
-  const handleAddSubcategory = () => {
-    if (newSubcategoryName.trim() && onAddSubcategory) {
-      onAddSubcategory(category.id, newSubcategoryName.trim());
-      setNewSubcategoryName("");
-      setShowAddSubcategoryDialog(false);
-    }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over) return;
-
-    const draggedTerm = active.data.current?.term as Term;
-    const targetSubcategoryId = over.id as string;
-
-    if (draggedTerm && targetSubcategoryId && onAddTermToSubcategory) {
-      // Add term to subcategory
-      onAddTermToSubcategory(
-        category.id,
-        targetSubcategoryId,
-        draggedTerm.text,
-        draggedTerm.image
-      );
-      
-      // Remove from main category
-      onRemoveTerm(category.id, draggedTerm.text);
-      
-      toast.success(t('termAddedToSubcategory'));
-    }
-  };
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editInitialText, setEditInitialText] = useState<string>("");
+  const [editInitialImage, setEditInitialImage] = useState<string | undefined>(undefined);
 
   const renderMainContent = () => {
-    // If viewing a subcategory
-    if (activeSubcategory) {
-      return (
-        <SubcategoryView
-          subcategoryName={activeSubcategory.name}
-          terms={activeSubcategory.terms}
-          selectedTerms={selectedTerms}
-          onSelectTerm={onSelectTerm}
-          onRemoveTerm={(term) => {
-            if (onRemoveTermFromSubcategory) {
-              onRemoveTermFromSubcategory(category.id, activeSubcategory.id, term);
-            }
-          }}
-          onBack={() => setActiveSubcategory(null)}
-        />
-      );
-    }
-
-    // Main category view - show subcategories as large cards with drag & drop
-    if (category.subcategories && category.subcategories.length > 0) {
-      return (
-        <DndContext onDragEnd={handleDragEnd}>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-semibold mb-4">{t('subcategories')}</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                {category.subcategories.map((sub) => (
-                  <DroppableSubcategoryCard
-                    key={sub.id}
-                    subcategory={sub}
-                    onClick={() => setActiveSubcategory(sub)}
-                    onDelete={() =>
-                      setDeleteDialog({ open: true, subcategoryId: sub.id })
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Direct terms in main category with drag capability */}
-            {category.terms.length > 0 && (
-              <div>
-                <h3 className="text-xl font-semibold mb-4">
-                  {t('terms')} <span className="text-sm text-muted-foreground">({t('dragToSubcategory')})</span>
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {category.terms.map((term) => (
-                    <DraggableTermCard
-                      key={term.text}
-                      term={term}
-                      isSelected={selectedTerms.includes(term.text)}
-                      onSelect={() => onSelectTerm(term.text)}
-                      onDelete={() => setDeleteDialog({ open: true, term: term.text })}
-                      isDragEnabled={true}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </DndContext>
-      );
-    }
-
-    // No subcategories - show main category terms
     return (
       <div>
         {category.terms.length === 0 ? (
@@ -188,6 +84,11 @@ export const CategoryDetailDialog = ({
                 onSelect={() => onSelectTerm(term.text)}
                 onDelete={() => setDeleteDialog({ open: true, term: term.text })}
                 isDragEnabled={false}
+                onEdit={() => {
+                  setEditInitialText(term.text);
+                  setEditInitialImage(term.image);
+                  setEditDialogOpen(true);
+                }}
               />
             ))}
           </div>
@@ -201,112 +102,99 @@ export const CategoryDetailDialog = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-7xl h-[90vh] bg-card border-border flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-3xl font-bold">
-              {category.name}
-            </DialogTitle>
+            {!isRenaming ? (
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-3xl font-bold">
+                  {category.name}
+                </DialogTitle>
+                {onRenameCategory && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsRenaming(true);
+                      setEditedCategoryName(category.name);
+                    }}
+                  >
+                    {t('edit')}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editedCategoryName}
+                  onChange={(e) => setEditedCategoryName(e.target.value)}
+                  placeholder={t('categoryName')}
+                  className="border-border"
+                />
+                <Button
+                  onClick={() => {
+                    const name = editedCategoryName.trim();
+                    if (name && onRenameCategory) {
+                      onRenameCategory(category.id, name);
+                    }
+                    setIsRenaming(false);
+                  }}
+                >
+                  {t('save')}
+                </Button>
+                <Button variant="outline" onClick={() => setIsRenaming(false)}>
+                  {t('cancel')}
+                </Button>
+              </div>
+            )}
             <DialogDescription className="text-muted-foreground">
               {category.terms.length} {category.terms.length === 1 ? t('termCount') : t('termCountPlural')}
-              {category.subcategories && category.subcategories.length > 0 && 
-                ` • ${category.subcategories.length} ${category.subcategories.length === 1 ? t('subcategory') : t('subcategories')}`
-              }
             </DialogDescription>
           </DialogHeader>
 
-          {/* Action Buttons */}
-          {!activeSubcategory && (
-            <div className="flex gap-2 mb-4">
-              <Button
-                onClick={() => setShowAddDialog(true)}
-                className="bg-gradient-primary text-white shadow-glow"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {t('addTerm')}
-              </Button>
-              
-              {!showAddSubcategoryDialog && (
-                <Button
-                  onClick={() => setShowAddSubcategoryDialog(true)}
-                  variant="outline"
-                  className="border-border"
-                >
-                  <FolderPlus className="h-4 w-4 mr-2" />
-                  {t('createSubcategory')}
-                </Button>
-              )}
-            </div>
-          )}
+          <div className="flex gap-2 mb-4">
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="bg-gradient-primary text-white shadow-glow"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addTerm')}
+            </Button>
+          </div>
 
-          {/* Add Subcategory Input */}
-          {showAddSubcategoryDialog && !activeSubcategory && (
-            <div className="mb-4 flex gap-2">
-              <Input
-                value={newSubcategoryName}
-                onChange={(e) => setNewSubcategoryName(e.target.value)}
-                placeholder={t('categoryName')}
-                className="border-border"
-                onKeyPress={(e) => e.key === "Enter" && handleAddSubcategory()}
-              />
-              <Button onClick={handleAddSubcategory}>
-                {t('add')}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddSubcategoryDialog(false);
-                  setNewSubcategoryName("");
-                }}
-              >
-                {t('cancel')}
-              </Button>
-            </div>
-          )}
-
-          {/* Main Content Area */}
           <div className="flex-1 overflow-y-auto pr-2">
             {renderMainContent()}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Add Term Dialog */}
       <AddTermDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onAdd={(term, image) => {
-          if (activeSubcategory && onAddTermToSubcategory) {
-            onAddTermToSubcategory(category.id, activeSubcategory.id, term, image);
-          } else {
-            onAddTerm(category.id, term, image);
-          }
+          onAddTerm(category.id, term, image);
         }}
       />
 
-      {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         open={deleteDialog.open}
         onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
         onConfirm={() => {
           if (deleteDialog.term) {
-            if (activeSubcategory && onRemoveTermFromSubcategory) {
-              onRemoveTermFromSubcategory(category.id, activeSubcategory.id, deleteDialog.term);
-            } else {
-              onRemoveTerm(category.id, deleteDialog.term);
-            }
-          } else if (deleteDialog.subcategoryId && onDeleteSubcategory) {
-            onDeleteSubcategory(category.id, deleteDialog.subcategoryId);
+            onRemoveTerm(category.id, deleteDialog.term);
           }
           setDeleteDialog({ open: false });
         }}
-        title={
-          deleteDialog.term
-            ? t('deleteTermTitle')
-            : t('deleteSubcategoryTitle')
-        }
-        description={
-          deleteDialog.term
-            ? `${t('deleteTermDescription')} "${deleteDialog.term}"?`
-            : t('deleteSubcategoryDescription')
-        }
+        title={t('deleteTermTitle')}
+        description={`${t('deleteTermDescription')} "${deleteDialog.term}"?`}
+      />
+
+      <EditTermDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        initialText={editInitialText}
+        initialImage={editInitialImage}
+        onSave={(newText, newImage) => {
+          if (onEditTerm) {
+            onEditTerm(category.id, editInitialText, newText, newImage);
+          }
+        }}
       />
     </>
   );

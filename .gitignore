@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Uploaded images
+public/uploads/
+uploads/
+
+# Local data storage
+data/
