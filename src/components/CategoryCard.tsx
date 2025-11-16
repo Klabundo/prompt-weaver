@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Trash2, ChevronRight, Folder } from "lucide-react";
@@ -24,6 +25,7 @@ export const CategoryCard = ({
   onDeleteCategory,
   onOpenCategory,
 }: CategoryCardProps) => {
+  const { t } = useTranslation();
   const [deleteDialog, setDeleteDialog] = useState(false);
 
   const termsWithImages = category.terms.filter(t => t.image).length;
@@ -44,8 +46,8 @@ export const CategoryCard = ({
                 {category.name}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {category.terms.length} Begriff{category.terms.length !== 1 ? "e" : ""}
-                {termsWithImages > 0 && ` • ${termsWithImages} mit Bild`}
+                {category.terms.length} {category.terms.length === 1 ? t('termCount') : t('termCountPlural')}
+                {termsWithImages > 0 && ` • ${termsWithImages} ${t('withImage')}`}
               </p>
             </div>
           </div>
@@ -74,8 +76,8 @@ export const CategoryCard = ({
           onDeleteCategory(category.id);
           setDeleteDialog(false);
         }}
-        title="Kategorie löschen?"
-        description={`Möchtest du die Kategorie "${category.name}" wirklich löschen? Alle Begriffe gehen verloren.`}
+        title={t('deleteCategoryTitle')}
+        description={t('deleteCategoryDescription', { name: category.name })}
       />
     </>
   );

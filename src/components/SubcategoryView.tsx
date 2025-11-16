@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export const SubcategoryView = ({
   onRemoveTerm,
   onBack,
 }: SubcategoryViewProps) => {
+  const { t } = useTranslation();
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     term?: string;
@@ -39,18 +41,18 @@ export const SubcategoryView = ({
           <div>
             <h2 className="text-3xl font-bold">{subcategoryName}</h2>
             <p className="text-muted-foreground mt-1">
-              {terms.length} Begriff{terms.length !== 1 ? "e" : ""}
+              {terms.length} {terms.length === 1 ? t('termCount') : t('termCountPlural')}
             </p>
           </div>
           <Button onClick={onBack} variant="outline" size="lg">
-            ← Zurück
+            ← {t('back')}
           </Button>
         </div>
 
         {terms.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <ImageIcon className="h-20 w-20 mx-auto mb-6 opacity-30" />
-            <p className="text-xl">Noch keine Begriffe vorhanden</p>
+            <p className="text-xl">{t('noTerms')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -124,8 +126,8 @@ export const SubcategoryView = ({
           }
           setDeleteDialog({ open: false });
         }}
-        title="Begriff löschen?"
-        description={`Möchtest du den Begriff "${deleteDialog.term}" wirklich löschen?`}
+        title={t('deleteTermTitle')}
+        description={`${t('deleteTermDescription')} "${deleteDialog.term}"?`}
       />
     </>
   );

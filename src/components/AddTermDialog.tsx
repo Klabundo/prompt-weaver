@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ interface AddTermDialogProps {
 }
 
 export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps) => {
+  const { t } = useTranslation();
   const [term, setTerm] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -55,20 +57,20 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Begriff hinzufügen</DialogTitle>
+          <DialogTitle>{t('addTerm')}</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Füge einen neuen Begriff hinzu, optional mit Bild
+            {t('addTermDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="term">Begriff*</Label>
+            <Label htmlFor="term">{t('termRequired')}</Label>
             <Input
               id="term"
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              placeholder="z.B. house, romantic..."
+              placeholder={t('termPlaceholder')}
               className="border-border bg-background"
               onKeyPress={(e) => e.key === "Enter" && handleAdd()}
             />
@@ -78,16 +80,16 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
             <TabsList className="grid w-full grid-cols-2 bg-muted">
               <TabsTrigger value="url">
                 <Link className="h-4 w-4 mr-2" />
-                Bild URL
+                {t('imageUrl')}
               </TabsTrigger>
               <TabsTrigger value="upload">
                 <Image className="h-4 w-4 mr-2" />
-                Hochladen
+                {t('imageUpload')}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="url" className="space-y-2">
-              <Label htmlFor="image-url">Bild URL (optional)</Label>
+              <Label htmlFor="image-url">{t('imageUrlLabel')}</Label>
               <Input
                 id="image-url"
                 type="url"
@@ -102,7 +104,7 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
             </TabsContent>
 
             <TabsContent value="upload" className="space-y-2">
-              <Label htmlFor="image-file">Bild hochladen (optional)</Label>
+              <Label htmlFor="image-file">{t('imageUploadLabel')}</Label>
               <Input
                 id="image-file"
                 type="file"
@@ -118,7 +120,7 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
               />
               {imageFile && (
                 <p className="text-sm text-muted-foreground">
-                  Ausgewählt: {imageFile.name}
+                  {t('imageSelected')}: {imageFile.name}
                 </p>
               )}
             </TabsContent>
@@ -127,10 +129,10 @@ export const AddTermDialog = ({ open, onOpenChange, onAdd }: AddTermDialogProps)
 
         <DialogFooter>
           <Button variant="outline" onClick={resetForm} className="border-border">
-            Abbrechen
+            {t('cancel')}
           </Button>
           <Button onClick={handleAdd} disabled={!term.trim()} className="bg-primary">
-            Hinzufügen
+            {t('add')}
           </Button>
         </DialogFooter>
       </DialogContent>
