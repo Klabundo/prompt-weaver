@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Copy, Check } from "lucide-react";
@@ -10,6 +11,7 @@ interface PromptPreviewProps {
 }
 
 export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const prompt = selectedTerms.join(", ");
@@ -18,7 +20,7 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
     if (prompt) {
       navigator.clipboard.writeText(prompt);
       setCopied(true);
-      toast.success("Prompt kopiert!");
+      toast.success(t('promptCopied'));
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -26,7 +28,7 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
   return (
     <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-card">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-foreground">Dein AI Prompt</h2>
+        <h2 className="text-xl font-bold text-foreground">{t('selectedTermsTitle')}</h2>
         <div className="flex gap-2">
           {selectedTerms.length > 0 && (
             <>
@@ -36,7 +38,7 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
                 size="sm"
                 className="border-border"
               >
-                Zurücksetzen
+                {t('clearSelection')}
               </Button>
               <Button
                 onClick={handleCopy}
@@ -46,12 +48,12 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
                 {copied ? (
                   <>
                     <Check className="h-4 w-4 mr-2" />
-                    Kopiert!
+                    {t('promptCopied')}
                   </>
                 ) : (
                   <>
                     <Copy className="h-4 w-4 mr-2" />
-                    Kopieren
+                    {t('copyPrompt')}
                   </>
                 )}
               </Button>
@@ -67,14 +69,14 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
           </p>
         ) : (
           <p className="text-muted-foreground text-sm italic">
-            Wähle Begriffe aus den Kategorien aus, um deinen Prompt zu erstellen...
+            {t('selectedTermsDescription')}
           </p>
         )}
       </div>
 
       {selectedTerms.length > 0 && (
         <div className="mt-4 text-xs text-muted-foreground">
-          {selectedTerms.length} Begriff{selectedTerms.length !== 1 ? "e" : ""} ausgewählt
+          {selectedTerms.length} {selectedTerms.length === 1 ? t('termCount') : t('termCountPlural')} {t('selected')}
         </div>
       )}
     </Card>
