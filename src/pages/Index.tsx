@@ -8,7 +8,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SettingsDialog } from "@/components/SettingsDialog";
 
 interface Term {
   text: string;
@@ -309,6 +309,48 @@ const Index = () => {
     toast.success("Auswahl zurückgesetzt");
   };
 
+  const handleExportData = () => {
+    const dataStr = JSON.stringify(projects, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `prompt-builder-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target?.result as string);
+            setProjects(data);
+            toast.success("Daten erfolgreich importiert!");
+          } catch (error) {
+            toast.error("Fehler beim Importieren der Daten");
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  const handleClearAllData = () => {
+    setProjects([]);
+    setSelectedTerms([]);
+    toast.success("Alle Daten wurden gelöscht");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -326,7 +368,11 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <ThemeToggle />
+            <SettingsDialog 
+              onExport={handleExportData}
+              onImport={handleImportData}
+              onClearData={handleClearAllData}
+            />
           </div>
         </div>
       </header>
