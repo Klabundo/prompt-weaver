@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,51 +37,81 @@ interface Project {
 
 const Index = () => {
   const { t } = useTranslation();
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: "1",
-      name: "Private",
-      categories: [
-        {
-          id: "1",
-          name: "Objekt",
-          terms: [
-            { text: "house" },
-            { text: "car" },
-            { text: "tree" },
-            { text: "mountain" },
-          ],
-        },
-        {
-          id: "2",
-          name: "Farben",
-          terms: [
-            { text: "yellow roof" },
-            { text: "blue sky" },
-            { text: "green grass" },
-          ],
-        },
-      ],
-    },
-    {
-      id: "2",
-      name: "Work",
-      categories: [
-        {
-          id: "3",
-          name: "Stimmung",
-          terms: [
-            { text: "professional" },
-            { text: "clean" },
-            { text: "modern" },
-          ],
-        },
-      ],
-    },
-  ]);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const defaultProjects: Project[] = [
+      {
+        id: "1",
+        name: "Private",
+        categories: [
+          {
+            id: "1",
+            name: "Objekt",
+            terms: [
+              { text: "house" },
+              { text: "car" },
+              { text: "tree" },
+              { text: "mountain" },
+            ],
+          },
+          {
+            id: "2",
+            name: "Farben",
+            terms: [
+              { text: "yellow roof" },
+              { text: "blue sky" },
+              { text: "green grass" },
+            ],
+          },
+        ],
+      },
+      {
+        id: "2",
+        name: "Work",
+        categories: [
+          {
+            id: "3",
+            name: "Stimmung",
+            terms: [
+              { text: "professional" },
+              { text: "clean" },
+              { text: "modern" },
+            ],
+          },
+        ],
+      },
+    ];
 
-  const [activeProjectId, setActiveProjectId] = useState(projects[0].id);
-  const [selectedTerms, setSelectedTerms] = useState<string[]>([]);
+    try {
+      const stored = localStorage.getItem("projects");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed as Project[];
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load projects from storage", e);
+    }
+    return defaultProjects;
+  });
+  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
+    const stored = localStorage.getItem("activeProjectId");
+    return stored || projects[0]?.id || "";
+  });
+  const [selectedTerms, setSelectedTerms] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("selectedTerms");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed as string[];
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load selected terms from storage", e);
+    }
+    return [];
+  });
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -352,6 +382,23 @@ const Index = () => {
     setSelectedTerms([]);
     toast.success(t('allDataCleared'));
   };
+
+  // Auto-save changes to localStorage when enabled
+  useEffect(() => {
+    const autoSaveEnabled = localStorage.getItem("autoSave") !== "false";
+    if (!autoSaveEnabled) return;
+    try {
+      localStorage.setItem("projects", JSON.stringify(projects));
+      localStorage.setItem("selectedTerms", JSON.stringify(selectedTerms));
+      if (activeProjectId) {
+        localStorage.setItem("activeProjectId", activeProjectId);
+      } else {
+        localStorage.removeItem("activeProjectId");
+      }
+    } catch (e) {
+      console.error("AutoSave failed", e);
+    }
+  }, [projects, selectedTerms, activeProjectId]);
 
   return (
     <div className="min-h-screen bg-background">
