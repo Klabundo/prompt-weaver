@@ -3,46 +3,122 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CategoryCard } from "@/components/CategoryCard";
 import { PromptPreview } from "@/components/PromptPreview";
-import { Plus, Sparkles } from "lucide-react";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface Term {
+  text: string;
+  image?: string;
+}
 
 interface Category {
   id: string;
   name: string;
-  terms: string[];
+  terms: Term[];
+}
+
+interface Project {
+  id: string;
+  name: string;
+  categories: Category[];
 }
 
 const Index = () => {
-  const [categories, setCategories] = useState<Category[]>([
+  const [projects, setProjects] = useState<Project[]>([
     {
       id: "1",
-      name: "Objekt",
-      terms: ["house", "car", "tree", "mountain"],
+      name: "Private",
+      categories: [
+        {
+          id: "1",
+          name: "Objekt",
+          terms: [
+            { text: "house" },
+            { text: "car" },
+            { text: "tree" },
+            { text: "mountain" },
+          ],
+        },
+        {
+          id: "2",
+          name: "Farben",
+          terms: [
+            { text: "yellow roof" },
+            { text: "blue sky" },
+            { text: "green grass" },
+          ],
+        },
+      ],
     },
     {
       id: "2",
-      name: "Farben",
-      terms: ["yellow roof", "blue sky", "green grass"],
-    },
-    {
-      id: "3",
-      name: "Stimmung",
-      terms: ["romantic", "dramatic", "peaceful", "mysterious"],
+      name: "Work",
+      categories: [
+        {
+          id: "3",
+          name: "Stimmung",
+          terms: [
+            { text: "professional" },
+            { text: "clean" },
+            { text: "modern" },
+          ],
+        },
+      ],
     },
   ]);
 
+  const [activeProjectId, setActiveProjectId] = useState(projects[0].id);
   const [selectedTerms, setSelectedTerms] = useState<string[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [deleteProjectDialog, setDeleteProjectDialog] = useState<{
+    open: boolean;
+    projectId?: string;
+  }>({ open: false });
+
+  const activeProject = projects.find((p) => p.id === activeProjectId);
+
+  const handleAddProject = () => {
+    if (newProjectName.trim()) {
+      const newProject: Project = {
+        id: Date.now().toString(),
+        name: newProjectName.trim(),
+        categories: [],
+      };
+      setProjects([...projects, newProject]);
+      setNewProjectName("");
+      setShowNewProject(false);
+      setActiveProjectId(newProject.id);
+      toast.success("Projekt hinzugefügt!");
+    }
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    setProjects(projects.filter((p) => p.id !== projectId));
+    if (activeProjectId === projectId && projects.length > 1) {
+      setActiveProjectId(projects.find((p) => p.id !== projectId)!.id);
+    }
+    toast.success("Projekt gelöscht");
+  };
 
   const handleAddCategory = () => {
-    if (newCategoryName.trim()) {
+    if (newCategoryName.trim() && activeProject) {
       const newCategory: Category = {
         id: Date.now().toString(),
         name: newCategoryName.trim(),
         terms: [],
       };
-      setCategories([...categories, newCategory]);
+      setProjects(
+        projects.map((p) =>
+          p.id === activeProjectId
+            ? { ...p, categories: [...p.categories, newCategory] }
+            : p
+        )
+      );
       setNewCategoryName("");
       setShowNewCategory(false);
       toast.success("Kategorie hinzugefügt!");
@@ -50,25 +126,53 @@ const Index = () => {
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    setCategories(categories.filter((cat) => cat.id !== categoryId));
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.filter((cat) => cat.id !== categoryId),
+            }
+          : p
+      )
+    );
     toast.success("Kategorie gelöscht");
   };
 
-  const handleAddTerm = (categoryId: string, term: string) => {
-    setCategories(
-      categories.map((cat) =>
-        cat.id === categoryId ? { ...cat, terms: [...cat.terms, term] } : cat
+  const handleAddTerm = (categoryId: string, term: string, image?: string) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? { ...cat, terms: [...cat.terms, { text: term, image }] }
+                  : cat
+              ),
+            }
+          : p
       )
     );
     toast.success("Begriff hinzugefügt!");
   };
 
   const handleRemoveTerm = (categoryId: string, term: string) => {
-    setCategories(
-      categories.map((cat) =>
-        cat.id === categoryId
-          ? { ...cat, terms: cat.terms.filter((t) => t !== term) }
-          : cat
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? {
+                      ...cat,
+                      terms: cat.terms.filter((t) => t.text !== term),
+                    }
+                  : cat
+              ),
+            }
+          : p
       )
     );
     setSelectedTerms(selectedTerms.filter((t) => t !== term));
@@ -113,72 +217,159 @@ const Index = () => {
           />
         </div>
 
-        {/* Categories Section */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-foreground">Kategorien</h2>
-          {!showNewCategory && (
-            <Button
-              onClick={() => setShowNewCategory(true)}
-              className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Neue Kategorie
-            </Button>
-          )}
-        </div>
+        {/* Projects Tabs */}
+        <Tabs value={activeProjectId} onValueChange={setActiveProjectId} className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <TabsList className="bg-muted">
+              {projects.map((project) => (
+                <TabsTrigger
+                  key={project.id}
+                  value={project.id}
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  {project.name}
+                  {projects.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteProjectDialog({ open: true, projectId: project.id });
+                      }}
+                      className="ml-2 hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-        {showNewCategory && (
-          <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
-            <div className="flex gap-2">
-              <Input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
-                placeholder="Kategoriename eingeben..."
-                className="flex-1 border-border"
-                autoFocus
-              />
-              <Button onClick={handleAddCategory} className="bg-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Hinzufügen
-              </Button>
+            {!showNewProject && (
               <Button
-                onClick={() => {
-                  setShowNewCategory(false);
-                  setNewCategoryName("");
-                }}
+                onClick={() => setShowNewProject(true)}
                 variant="outline"
+                size="sm"
+                className="border-border"
               >
-                Abbrechen
+                <Plus className="h-4 w-4 mr-2" />
+                Neues Projekt
               </Button>
+            )}
+          </div>
+
+          {showNewProject && (
+            <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
+              <div className="flex gap-2">
+                <Input
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleAddProject()}
+                  placeholder="Projektname eingeben..."
+                  className="flex-1 border-border"
+                  autoFocus
+                />
+                <Button onClick={handleAddProject} className="bg-primary">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Hinzufügen
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowNewProject(false);
+                    setNewProjectName("");
+                  }}
+                  variant="outline"
+                >
+                  Abbrechen
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              onAddTerm={handleAddTerm}
-              onRemoveTerm={handleRemoveTerm}
-              onDeleteCategory={handleDeleteCategory}
-              onSelectTerm={handleSelectTerm}
-              selectedTerms={selectedTerms}
-            />
+          {projects.map((project) => (
+            <TabsContent key={project.id} value={project.id}>
+              {/* Categories Section */}
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-foreground">Kategorien</h2>
+                {!showNewCategory && (
+                  <Button
+                    onClick={() => setShowNewCategory(true)}
+                    className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Neue Kategorie
+                  </Button>
+                )}
+              </div>
+
+              {showNewCategory && (
+                <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
+                      placeholder="Kategoriename eingeben..."
+                      className="flex-1 border-border"
+                      autoFocus
+                    />
+                    <Button onClick={handleAddCategory} className="bg-primary">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Hinzufügen
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowNewCategory(false);
+                        setNewCategoryName("");
+                      }}
+                      variant="outline"
+                    >
+                      Abbrechen
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Categories Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {project.categories.map((category) => (
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    onAddTerm={handleAddTerm}
+                    onRemoveTerm={handleRemoveTerm}
+                    onDeleteCategory={handleDeleteCategory}
+                    onSelectTerm={handleSelectTerm}
+                    selectedTerms={selectedTerms}
+                  />
+                ))}
+              </div>
+
+              {project.categories.length === 0 && (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Sparkles className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">
+                    Erstelle deine erste Kategorie in "{project.name}"!
+                  </p>
+                </div>
+              )}
+            </TabsContent>
           ))}
-        </div>
-
-        {categories.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Sparkles className="h-16 w-16 mx-auto mb-4 opacity-50" />
-            <p className="text-lg">
-              Erstelle deine erste Kategorie, um zu starten!
-            </p>
-          </div>
-        )}
+        </Tabs>
       </main>
+
+      <DeleteConfirmDialog
+        open={deleteProjectDialog.open}
+        onOpenChange={(open) => setDeleteProjectDialog({ open })}
+        onConfirm={() => {
+          if (deleteProjectDialog.projectId) {
+            handleDeleteProject(deleteProjectDialog.projectId);
+          }
+          setDeleteProjectDialog({ open: false });
+        }}
+        title="Projekt löschen?"
+        description={`Möchtest du das Projekt "${
+          projects.find((p) => p.id === deleteProjectDialog.projectId)?.name
+        }" wirklich löschen? Alle Kategorien und Begriffe gehen verloren.`}
+      />
     </div>
   );
 };
