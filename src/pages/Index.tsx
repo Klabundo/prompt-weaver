@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CategoryCard } from "@/components/CategoryCard";
+import { CategoryDetailDialog } from "@/components/CategoryDetailDialog";
 import { PromptPreview } from "@/components/PromptPreview";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
@@ -13,10 +14,17 @@ interface Term {
   image?: string;
 }
 
+interface Subcategory {
+  id: string;
+  name: string;
+  terms: Term[];
+}
+
 interface Category {
   id: string;
   name: string;
   terms: Term[];
+  subcategories?: Subcategory[];
 }
 
 interface Project {
@@ -75,12 +83,14 @@ const Index = () => {
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
+  const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
   const [deleteProjectDialog, setDeleteProjectDialog] = useState<{
     open: boolean;
     projectId?: string;
   }>({ open: false });
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
+  const openCategory = activeProject?.categories.find((c) => c.id === openCategoryId);
 
   const handleAddProject = () => {
     if (newProjectName.trim()) {
@@ -111,6 +121,7 @@ const Index = () => {
         id: Date.now().toString(),
         name: newCategoryName.trim(),
         terms: [],
+        subcategories: [],
       };
       setProjects(
         projects.map((p) =>
@@ -168,6 +179,112 @@ const Index = () => {
                   ? {
                       ...cat,
                       terms: cat.terms.filter((t) => t.text !== term),
+                    }
+                  : cat
+              ),
+            }
+          : p
+      )
+    );
+    setSelectedTerms(selectedTerms.filter((t) => t !== term));
+  };
+
+  const handleAddSubcategory = (categoryId: string, name: string) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? {
+                      ...cat,
+                      subcategories: [
+                        ...(cat.subcategories || []),
+                        { id: Date.now().toString(), name, terms: [] },
+                      ],
+                    }
+                  : cat
+              ),
+            }
+          : p
+      )
+    );
+    toast.success("Unterkategorie hinzugefügt!");
+  };
+
+  const handleDeleteSubcategory = (categoryId: string, subcategoryId: string) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? {
+                      ...cat,
+                      subcategories: (cat.subcategories || []).filter(
+                        (sub) => sub.id !== subcategoryId
+                      ),
+                    }
+                  : cat
+              ),
+            }
+          : p
+      )
+    );
+    toast.success("Unterkategorie gelöscht");
+  };
+
+  const handleAddTermToSubcategory = (
+    categoryId: string,
+    subcategoryId: string,
+    term: string,
+    image?: string
+  ) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? {
+                      ...cat,
+                      subcategories: (cat.subcategories || []).map((sub) =>
+                        sub.id === subcategoryId
+                          ? { ...sub, terms: [...sub.terms, { text: term, image }] }
+                          : sub
+                      ),
+                    }
+                  : cat
+              ),
+            }
+          : p
+      )
+    );
+    toast.success("Begriff zur Unterkategorie hinzugefügt!");
+  };
+
+  const handleRemoveTermFromSubcategory = (
+    categoryId: string,
+    subcategoryId: string,
+    term: string
+  ) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              categories: p.categories.map((cat) =>
+                cat.id === categoryId
+                  ? {
+                      ...cat,
+                      subcategories: (cat.subcategories || []).map((sub) =>
+                        sub.id === subcategoryId
+                          ? { ...sub, terms: sub.terms.filter((t) => t.text !== term) }
+                          : sub
+                      ),
                     }
                   : cat
               ),
@@ -334,11 +451,8 @@ const Index = () => {
                   <CategoryCard
                     key={category.id}
                     category={category}
-                    onAddTerm={handleAddTerm}
-                    onRemoveTerm={handleRemoveTerm}
                     onDeleteCategory={handleDeleteCategory}
-                    onSelectTerm={handleSelectTerm}
-                    selectedTerms={selectedTerms}
+                    onOpenCategory={setOpenCategoryId}
                   />
                 ))}
               </div>
@@ -355,6 +469,22 @@ const Index = () => {
           ))}
         </Tabs>
       </main>
+
+      {openCategory && (
+        <CategoryDetailDialog
+          open={openCategoryId !== null}
+          onOpenChange={(open) => !open && setOpenCategoryId(null)}
+          category={openCategory}
+          onAddTerm={handleAddTerm}
+          onRemoveTerm={handleRemoveTerm}
+          onSelectTerm={handleSelectTerm}
+          selectedTerms={selectedTerms}
+          onAddSubcategory={handleAddSubcategory}
+          onDeleteSubcategory={handleDeleteSubcategory}
+          onAddTermToSubcategory={handleAddTermToSubcategory}
+          onRemoveTermFromSubcategory={handleRemoveTermFromSubcategory}
+        />
+      )}
 
       <DeleteConfirmDialog
         open={deleteProjectDialog.open}
