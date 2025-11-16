@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, Eye } from "lucide-react";
-import { TermWithImage } from "./TermWithImage";
+import { Trash2, ChevronRight, Folder } from "lucide-react";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
-import { AddTermDialog } from "./AddTermDialog";
-import { CategoryDetailDialog } from "./CategoryDetailDialog";
 
 interface Term {
   text: string;
@@ -18,120 +15,76 @@ interface CategoryCardProps {
     name: string;
     terms: Term[];
   };
-  onAddTerm: (categoryId: string, term: string, image?: string) => void;
-  onRemoveTerm: (categoryId: string, term: string) => void;
   onDeleteCategory: (categoryId: string) => void;
-  onSelectTerm: (term: string) => void;
-  selectedTerms: string[];
+  onOpenCategory: (categoryId: string) => void;
 }
 
 export const CategoryCard = ({
   category,
-  onAddTerm,
-  onRemoveTerm,
   onDeleteCategory,
-  onSelectTerm,
-  selectedTerms,
+  onOpenCategory,
 }: CategoryCardProps) => {
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean;
-    type: "category" | "term";
-    item?: string;
-  }>({ open: false, type: "category" });
+  const [deleteDialog, setDeleteDialog] = useState(false);
 
-  const handleConfirmDelete = () => {
-    if (deleteDialog.type === "category") {
-      onDeleteCategory(category.id);
-    } else if (deleteDialog.type === "term" && deleteDialog.item) {
-      onRemoveTerm(category.id, deleteDialog.item);
-    }
-    setDeleteDialog({ open: false, type: "category" });
-  };
+  const termsWithImages = category.terms.filter(t => t.image).length;
 
   return (
     <>
-      <Card className="p-6 bg-gradient-card shadow-card hover:shadow-glow transition-all duration-300 animate-scale-in border-border/50">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">{category.name}</h3>
-          <div className="flex gap-1">
+      <Card 
+        className="p-6 bg-gradient-card shadow-card hover:shadow-glow transition-all duration-300 animate-scale-in border-border/50 cursor-pointer group"
+        onClick={() => onOpenCategory(category.id)}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              <Folder className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                {category.name}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {category.terms.length} Begriff{category.terms.length !== 1 ? "e" : ""}
+                {termsWithImages > 0 && ` • ${termsWithImages} mit Bild`}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowDetailDialog(true)}
-              className="h-8 w-8 text-muted-foreground hover:text-primary"
-              title="Kategorie öffnen"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDeleteDialog({ open: true, type: "category" })}
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteDialog(true);
+              }}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
+            <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-4 min-h-[2.5rem]">
-          {category.terms.map((term) => (
-            <TermWithImage
-              key={term.text}
-              term={term.text}
-              image={term.image}
-              isSelected={selectedTerms.includes(term.text)}
-              onSelect={() => onSelectTerm(term.text)}
-              onRemove={() =>
-                setDeleteDialog({ open: true, type: "term", item: term.text })
-              }
-            />
-          ))}
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-primary transition-all duration-500"
+            style={{ 
+              width: category.terms.length > 0 ? `${Math.min(100, (category.terms.length / 20) * 100)}%` : '0%' 
+            }}
+          />
         </div>
-
-        <Button
-          onClick={() => setShowAddDialog(true)}
-          variant="outline"
-          size="sm"
-          className="w-full border-dashed border-border hover:border-primary hover:bg-secondary"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Begriff hinzufügen
-        </Button>
       </Card>
 
-      <AddTermDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onAdd={(term, image) => onAddTerm(category.id, term, image)}
-      />
-
-      <CategoryDetailDialog
-        open={showDetailDialog}
-        onOpenChange={setShowDetailDialog}
-        category={category}
-        onAddTerm={onAddTerm}
-        onRemoveTerm={onRemoveTerm}
-        onSelectTerm={onSelectTerm}
-        selectedTerms={selectedTerms}
-      />
-
       <DeleteConfirmDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
-        onConfirm={handleConfirmDelete}
-        title={
-          deleteDialog.type === "category"
-            ? "Kategorie löschen?"
-            : "Begriff löschen?"
-        }
-        description={
-          deleteDialog.type === "category"
-            ? `Möchtest du die Kategorie "${category.name}" wirklich löschen? Alle Begriffe gehen verloren.`
-            : `Möchtest du den Begriff "${deleteDialog.item}" wirklich löschen?`
-        }
+        open={deleteDialog}
+        onOpenChange={setDeleteDialog}
+        onConfirm={() => {
+          onDeleteCategory(category.id);
+          setDeleteDialog(false);
+        }}
+        title="Kategorie löschen?"
+        description={`Möchtest du die Kategorie "${category.name}" wirklich löschen? Alle Begriffe gehen verloren.`}
       />
     </>
   );
