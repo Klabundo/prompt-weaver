@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Eye } from "lucide-react";
 import { TermWithImage } from "./TermWithImage";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { AddTermDialog } from "./AddTermDialog";
+import { CategoryDetailDialog } from "./CategoryDetailDialog";
 
 interface Term {
   text: string;
@@ -33,6 +34,7 @@ export const CategoryCard = ({
   selectedTerms,
 }: CategoryCardProps) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     type: "category" | "term";
@@ -53,14 +55,25 @@ export const CategoryCard = ({
       <Card className="p-6 bg-gradient-card shadow-card hover:shadow-glow transition-all duration-300 animate-scale-in border-border/50">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">{category.name}</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setDeleteDialog({ open: true, type: "category" })}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDetailDialog(true)}
+              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              title="Kategorie öffnen"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDeleteDialog({ open: true, type: "category" })}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4 min-h-[2.5rem]">
@@ -93,6 +106,16 @@ export const CategoryCard = ({
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onAdd={(term, image) => onAddTerm(category.id, term, image)}
+      />
+
+      <CategoryDetailDialog
+        open={showDetailDialog}
+        onOpenChange={setShowDetailDialog}
+        category={category}
+        onAddTerm={onAddTerm}
+        onRemoveTerm={onRemoveTerm}
+        onSelectTerm={onSelectTerm}
+        selectedTerms={selectedTerms}
       />
 
       <DeleteConfirmDialog
