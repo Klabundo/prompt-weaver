@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CategoryCard } from "@/components/CategoryCard";
@@ -35,6 +36,7 @@ interface Project {
 }
 
 const Index = () => {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([
     {
       id: "1",
@@ -104,7 +106,7 @@ const Index = () => {
       setNewProjectName("");
       setShowNewProject(false);
       setActiveProjectId(newProject.id);
-      toast.success("Projekt hinzugefügt!");
+      toast.success(t('projectAdded'));
     }
   };
 
@@ -113,7 +115,7 @@ const Index = () => {
     if (activeProjectId === projectId && projects.length > 1) {
       setActiveProjectId(projects.find((p) => p.id !== projectId)!.id);
     }
-    toast.success("Projekt gelöscht");
+    toast.success(t('projectDeleted'));
   };
 
   const handleAddCategory = () => {
@@ -133,7 +135,7 @@ const Index = () => {
       );
       setNewCategoryName("");
       setShowNewCategory(false);
-      toast.success("Kategorie hinzugefügt!");
+      toast.success(t('categoryAdded'));
     }
   };
 
@@ -148,7 +150,7 @@ const Index = () => {
           : p
       )
     );
-    toast.success("Kategorie gelöscht");
+    toast.success(t('categoryDeleted'));
   };
 
   const handleAddTerm = (categoryId: string, term: string, image?: string) => {
@@ -166,7 +168,7 @@ const Index = () => {
           : p
       )
     );
-    toast.success("Begriff hinzugefügt!");
+    toast.success(t('termAdded'));
   };
 
   const handleRemoveTerm = (categoryId: string, term: string) => {
@@ -211,7 +213,7 @@ const Index = () => {
           : p
       )
     );
-    toast.success("Unterkategorie hinzugefügt!");
+    toast.success(t('subcategoryAdded'));
   };
 
   const handleDeleteSubcategory = (categoryId: string, subcategoryId: string) => {
@@ -234,7 +236,7 @@ const Index = () => {
           : p
       )
     );
-    toast.success("Unterkategorie gelöscht");
+    toast.success(t('subcategoryDeleted'));
   };
 
   const handleAddTermToSubcategory = (
@@ -264,7 +266,7 @@ const Index = () => {
           : p
       )
     );
-    toast.success("Begriff zur Unterkategorie hinzugefügt!");
+    toast.success(t('termAddedToSubcategory'));
   };
 
   const handleRemoveTermFromSubcategory = (
@@ -306,7 +308,7 @@ const Index = () => {
 
   const handleClearSelection = () => {
     setSelectedTerms([]);
-    toast.success("Auswahl zurückgesetzt");
+    toast.success(t('selectionCleared'));
   };
 
   const handleExportData = () => {
@@ -334,9 +336,9 @@ const Index = () => {
           try {
             const data = JSON.parse(event.target?.result as string);
             setProjects(data);
-            toast.success("Daten erfolgreich importiert!");
+            toast.success(t('dataImported'));
           } catch (error) {
-            toast.error("Fehler beim Importieren der Daten");
+            toast.error(t('dataExportError'));
           }
         };
         reader.readAsText(file);
@@ -348,7 +350,7 @@ const Index = () => {
   const handleClearAllData = () => {
     setProjects([]);
     setSelectedTerms([]);
-    toast.success("Alle Daten wurden gelöscht");
+    toast.success(t('allDataCleared'));
   };
 
   return (
@@ -361,10 +363,10 @@ const Index = () => {
               <Sparkles className="h-8 w-8 text-primary" />
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  AI Prompt Builder
+                  {t('appTitle')}
                 </h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                  Erstelle perfekte Prompts für deine AI-Bilder
+                  {t('appSubtitle')}
                 </p>
               </div>
             </div>
@@ -420,7 +422,7 @@ const Index = () => {
                 className="border-border"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Neues Projekt
+                {t('newProject')}
               </Button>
             )}
           </div>
@@ -438,7 +440,7 @@ const Index = () => {
                 />
                 <Button onClick={handleAddProject} className="bg-primary">
                   <Plus className="h-4 w-4 mr-2" />
-                  Hinzufügen
+                  {t('add')}
                 </Button>
                 <Button
                   onClick={() => {
@@ -447,7 +449,7 @@ const Index = () => {
                   }}
                   variant="outline"
                 >
-                  Abbrechen
+                  {t('cancel')}
                 </Button>
               </div>
             </div>
@@ -457,14 +459,14 @@ const Index = () => {
             <TabsContent key={project.id} value={project.id}>
               {/* Categories Section */}
               <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-foreground">Kategorien</h2>
+                <h2 className="text-2xl font-bold text-foreground">{t('categories')}</h2>
                 {!showNewCategory && (
                   <Button
                     onClick={() => setShowNewCategory(true)}
                     className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Neue Kategorie
+                    {t('newCategory')}
                   </Button>
                 )}
               </div>
