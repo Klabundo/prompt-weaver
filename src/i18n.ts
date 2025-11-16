@@ -37,6 +37,11 @@ const resources = {
       withImage: "mit Bild",
       termCount: "Begriff",
       termCountPlural: "Begriffe",
+      selected: "ausgewählt",
+      
+      // Drag and Drop
+      dragToSubcategory: "In Unterkategorie ziehen",
+      dropHere: "Hier ablegen",
       
       // Settings
       settingsTitle: "Einstellungen",
@@ -88,7 +93,7 @@ const resources = {
       appTitle: "AI Prompt Builder",
       appSubtitle: "Erstelle perfekte Prompts für deine AI-Bilder",
       selectedTermsTitle: "Ausgewählte Begriffe",
-      selectedTermsDescription: "Kombiniere Begriffe aus verschiedenen Kategorien",
+      selectedTermsDescription: "Wähle Begriffe aus den Kategorien aus, um deinen Prompt zu erstellen...",
       copyPrompt: "Prompt kopieren",
       clearSelection: "Auswahl löschen",
       promptCopied: "Prompt kopiert!",
@@ -131,6 +136,11 @@ const resources = {
       withImage: "with image",
       termCount: "term",
       termCountPlural: "terms",
+      selected: "selected",
+      
+      // Drag and Drop
+      dragToSubcategory: "Drag to subcategory",
+      dropHere: "Drop here",
       
       // Settings
       settingsTitle: "Settings",
@@ -182,7 +192,7 @@ const resources = {
       appTitle: "AI Prompt Builder",
       appSubtitle: "Create perfect prompts for your AI images",
       selectedTermsTitle: "Selected Terms",
-      selectedTermsDescription: "Combine terms from different categories",
+      selectedTermsDescription: "Select terms from categories to create your prompt...",
       copyPrompt: "Copy Prompt",
       clearSelection: "Clear Selection",
       promptCopied: "Prompt copied!",
@@ -225,6 +235,11 @@ const resources = {
       withImage: "con imagen",
       termCount: "término",
       termCountPlural: "términos",
+      selected: "seleccionado",
+      
+      // Drag and Drop
+      dragToSubcategory: "Arrastrar a subcategoría",
+      dropHere: "Soltar aquí",
       
       // Settings
       settingsTitle: "Configuración",
@@ -276,7 +291,7 @@ const resources = {
       appTitle: "Generador de Prompts IA",
       appSubtitle: "Crea prompts perfectos para tus imágenes IA",
       selectedTermsTitle: "Términos Seleccionados",
-      selectedTermsDescription: "Combina términos de diferentes categorías",
+      selectedTermsDescription: "Selecciona términos de las categorías para crear tu prompt...",
       copyPrompt: "Copiar Prompt",
       clearSelection: "Limpiar Selección",
       promptCopied: "¡Prompt copiado!",
@@ -319,6 +334,11 @@ const resources = {
       withImage: "avec image",
       termCount: "terme",
       termCountPlural: "termes",
+      selected: "sélectionné",
+      
+      // Drag and Drop
+      dragToSubcategory: "Glisser vers la sous-catégorie",
+      dropHere: "Déposer ici",
       
       // Settings
       settingsTitle: "Paramètres",
@@ -370,7 +390,7 @@ const resources = {
       appTitle: "Générateur de Prompts IA",
       appSubtitle: "Créez des prompts parfaits pour vos images IA",
       selectedTermsTitle: "Termes Sélectionnés",
-      selectedTermsDescription: "Combinez des termes de différentes catégories",
+      selectedTermsDescription: "Sélectionnez des termes dans les catégories pour créer votre prompt...",
       copyPrompt: "Copier le Prompt",
       clearSelection: "Effacer la Sélection",
       promptCopied: "Prompt copié !",
