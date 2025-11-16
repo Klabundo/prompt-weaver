@@ -65,15 +65,6 @@ export const CategoryCard = ({
             <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </div>
-
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-primary transition-all duration-500"
-            style={{ 
-              width: category.terms.length > 0 ? `${Math.min(100, (category.terms.length / 20) * 100)}%` : '0%' 
-            }}
-          />
-        </div>
       </Card>
 
       <DeleteConfirmDialog
