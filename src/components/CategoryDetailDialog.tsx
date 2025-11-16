@@ -9,11 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Image as ImageIcon, FolderPlus } from "lucide-react";
+import { Plus, X, Image as ImageIcon, FolderPlus, Folder } from "lucide-react";
 import { AddTermDialog } from "./AddTermDialog";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SubcategoryView } from "./SubcategoryView";
 
 interface Term {
   text: string;
@@ -61,7 +61,7 @@ export const CategoryDetailDialog = ({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showAddSubcategoryDialog, setShowAddSubcategoryDialog] = useState(false);
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
-  const [activeSubcategoryId, setActiveSubcategoryId] = useState<string | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<Subcategory | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     term?: string;
@@ -76,178 +76,244 @@ export const CategoryDetailDialog = ({
     }
   };
 
-  const renderTermsGrid = (terms: Term[], subcategoryId?: string) => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-4">
-      {terms.map((term) => {
-        const isSelected = selectedTerms.includes(term.text);
-        return (
-          <Card
-            key={term.text}
-            onClick={() => onSelectTerm(term.text)}
-            className={`group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-glow ${
-              isSelected
-                ? "ring-2 ring-primary shadow-glow scale-105"
-                : "hover:scale-102"
-            }`}
-          >
-            {term.image ? (
-              <div className="aspect-square relative">
-                <img
-                  src={term.image}
-                  alt={term.text}
-                  className="w-full h-full object-cover"
-                />
-                {isSelected && (
-                  <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      ✓
+  const renderMainContent = () => {
+    // If viewing a subcategory
+    if (activeSubcategory) {
+      return (
+        <SubcategoryView
+          subcategoryName={activeSubcategory.name}
+          terms={activeSubcategory.terms}
+          selectedTerms={selectedTerms}
+          onSelectTerm={onSelectTerm}
+          onRemoveTerm={(term) => {
+            if (onRemoveTermFromSubcategory) {
+              onRemoveTermFromSubcategory(category.id, activeSubcategory.id, term);
+            }
+          }}
+          onBack={() => setActiveSubcategory(null)}
+        />
+      );
+    }
+
+    // Main category view - show subcategories as large cards
+    if (category.subcategories && category.subcategories.length > 0) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Unterkategorien</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {category.subcategories.map((sub) => {
+                const imageCount = sub.terms.filter(t => t.image).length;
+                return (
+                  <Card
+                    key={sub.id}
+                    onClick={() => setActiveSubcategory(sub)}
+                    className="group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-glow hover:scale-105"
+                  >
+                    <div className="aspect-square bg-gradient-card flex flex-col items-center justify-center p-6">
+                      <Folder className="h-20 w-20 text-primary mb-4" />
+                      <h4 className="font-semibold text-lg text-center">{sub.name}</h4>
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="aspect-square bg-muted flex items-center justify-center">
-                <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
-              </div>
-            )}
-            
-            <div className="p-3">
-              <div className="flex items-center justify-between gap-2">
-                <Badge
-                  variant={isSelected ? "default" : "secondary"}
-                  className="flex-1 justify-center truncate"
-                >
-                  {term.text}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteDialog({ open: true, term: term.text, subcategoryId });
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                    <div className="p-4 border-t border-border">
+                      <Badge variant="secondary" className="w-full justify-center">
+                        {sub.terms.length} Begriff{sub.terms.length !== 1 ? "e" : ""}
+                        {imageCount > 0 && ` • ${imageCount} 🖼️`}
+                      </Badge>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Direct terms in main category */}
+          {category.terms.length > 0 && (
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Direkte Begriffe</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {category.terms.map((term) => {
+                  const isSelected = selectedTerms.includes(term.text);
+                  return (
+                    <Card
+                      key={term.text}
+                      onClick={() => onSelectTerm(term.text)}
+                      className={`group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-glow ${
+                        isSelected
+                          ? "ring-2 ring-primary shadow-glow scale-105"
+                          : "hover:scale-102"
+                      }`}
+                    >
+                      {term.image ? (
+                        <div className="aspect-square relative">
+                          <img
+                            src={term.image}
+                            alt={term.text}
+                            className="w-full h-full object-cover"
+                          />
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                                ✓
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="aspect-square bg-muted flex items-center justify-center">
+                          <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      
+                      <div className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge
+                            variant={isSelected ? "default" : "secondary"}
+                            className="flex-1 justify-center truncate"
+                          >
+                            {term.text}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteDialog({ open: true, term: term.text });
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
-          </Card>
-        );
-      })}
-    </div>
-  );
+          )}
+        </div>
+      );
+    }
+
+    // No subcategories - show main category terms
+    return (
+      <div>
+        {category.terms.length === 0 ? (
+          <div className="text-center py-20 text-muted-foreground">
+            <ImageIcon className="h-20 w-20 mx-auto mb-6 opacity-30" />
+            <p className="text-xl">Noch keine Begriffe vorhanden</p>
+            <p className="text-sm mt-2">Klicke unten auf "Begriff hinzufügen"</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {category.terms.map((term) => {
+              const isSelected = selectedTerms.includes(term.text);
+              return (
+                <Card
+                  key={term.text}
+                  onClick={() => onSelectTerm(term.text)}
+                  className={`group relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-glow ${
+                    isSelected
+                      ? "ring-2 ring-primary shadow-glow scale-105"
+                      : "hover:scale-102"
+                  }`}
+                >
+                  {term.image ? (
+                    <div className="aspect-square relative">
+                      <img
+                        src={term.image}
+                        alt={term.text}
+                        className="w-full h-full object-cover"
+                      />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                            ✓
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="aspect-square bg-muted flex items-center justify-center">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  
+                  <div className="p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge
+                        variant={isSelected ? "default" : "secondary"}
+                        className="flex-1 justify-center truncate"
+                      >
+                        {term.text}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteDialog({ open: true, term: term.text });
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col bg-card border-border">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-2xl">{category.name}</DialogTitle>
+            <DialogTitle className="text-3xl">
+              {activeSubcategory ? activeSubcategory.name : category.name}
+            </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              {category.terms.length} direkte Begriff{category.terms.length !== 1 ? "e" : ""}
-              {category.subcategories && category.subcategories.length > 0 && 
-                ` • ${category.subcategories.length} Unterkategorie${category.subcategories.length !== 1 ? "n" : ""}`
-              }
+              {!activeSubcategory && (
+                <>
+                  {category.terms.length} direkte Begriff{category.terms.length !== 1 ? "e" : ""}
+                  {category.subcategories && category.subcategories.length > 0 && 
+                    ` • ${category.subcategories.length} Unterkategorie${category.subcategories.length !== 1 ? "n" : ""}`
+                  }
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-1">
-            {category.subcategories && category.subcategories.length > 0 ? (
-              <Tabs defaultValue="main" className="w-full">
-                <div className="flex items-center justify-between mb-4">
-                  <TabsList className="bg-muted">
-                    <TabsTrigger value="main">Hauptkategorie</TabsTrigger>
-                    {category.subcategories.map((sub) => (
-                      <TabsTrigger key={sub.id} value={sub.id}>
-                        {sub.name} ({sub.terms.length})
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  {onAddSubcategory && (
-                    <Button
-                      onClick={() => setShowAddSubcategoryDialog(true)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <FolderPlus className="h-4 w-4 mr-2" />
-                      Unterkategorie
-                    </Button>
-                  )}
-                </div>
-
-                <TabsContent value="main">
-                  {category.terms.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                      <p className="text-lg">Noch keine Begriffe vorhanden</p>
-                    </div>
-                  ) : (
-                    renderTermsGrid(category.terms)
-                  )}
-                </TabsContent>
-
-                {category.subcategories.map((sub) => (
-                  <TabsContent key={sub.id} value={sub.id}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">{sub.name}</h3>
-                      {onDeleteSubcategory && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteDialog({ open: true, subcategoryId: sub.id })}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Unterkategorie löschen
-                        </Button>
-                      )}
-                    </div>
-                    {sub.terms.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                        <p className="text-lg">Noch keine Begriffe vorhanden</p>
-                      </div>
-                    ) : (
-                      renderTermsGrid(sub.terms, sub.id)
-                    )}
-                  </TabsContent>
-                ))}
-              </Tabs>
-            ) : (
-              <>
-                {category.terms.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                    <p className="text-lg">Noch keine Begriffe vorhanden</p>
-                    <p className="text-sm mt-2">Klicke unten auf "Begriff hinzufügen"</p>
-                  </div>
-                ) : (
-                  renderTermsGrid(category.terms)
-                )}
-              </>
-            )}
+          <div className="flex-1 overflow-y-auto px-1 py-4">
+            {renderMainContent()}
           </div>
 
-          <div className="border-t border-border pt-4 mt-4 flex gap-2">
-            {onAddSubcategory && (!category.subcategories || category.subcategories.length === 0) && (
+          {!activeSubcategory && (
+            <div className="border-t border-border pt-4 mt-4 flex gap-2">
+              {onAddSubcategory && (
+                <Button
+                  onClick={() => setShowAddSubcategoryDialog(true)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  Unterkategorie erstellen
+                </Button>
+              )}
               <Button
-                onClick={() => setShowAddSubcategoryDialog(true)}
-                variant="outline"
-                className="flex-1"
+                onClick={() => setShowAddDialog(true)}
+                className="flex-1 bg-gradient-primary text-white shadow-glow hover:shadow-lg"
               >
-                <FolderPlus className="h-4 w-4 mr-2" />
-                Unterkategorie erstellen
+                <Plus className="h-4 w-4 mr-2" />
+                Begriff hinzufügen
               </Button>
-            )}
-            <Button
-              onClick={() => setShowAddDialog(true)}
-              className="flex-1 bg-gradient-primary text-white shadow-glow hover:shadow-lg"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Begriff hinzufügen
-            </Button>
-          </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -255,8 +321,8 @@ export const CategoryDetailDialog = ({
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onAdd={(term, image) => {
-          if (activeSubcategoryId && onAddTermToSubcategory) {
-            onAddTermToSubcategory(category.id, activeSubcategoryId, term, image);
+          if (activeSubcategory && onAddTermToSubcategory) {
+            onAddTermToSubcategory(category.id, activeSubcategory.id, term, image);
           } else {
             onAddTerm(category.id, term, image);
           }
@@ -302,8 +368,8 @@ export const CategoryDetailDialog = ({
           if (deleteDialog.subcategoryId && onDeleteSubcategory) {
             onDeleteSubcategory(category.id, deleteDialog.subcategoryId);
           } else if (deleteDialog.term) {
-            if (deleteDialog.subcategoryId && onRemoveTermFromSubcategory) {
-              onRemoveTermFromSubcategory(category.id, deleteDialog.subcategoryId, deleteDialog.term);
+            if (activeSubcategory && onRemoveTermFromSubcategory) {
+              onRemoveTermFromSubcategory(category.id, activeSubcategory.id, deleteDialog.term);
             } else {
               onRemoveTerm(category.id, deleteDialog.term);
             }

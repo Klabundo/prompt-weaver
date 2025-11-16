@@ -8,6 +8,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Term {
   text: string;
@@ -313,15 +314,20 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-center gap-3">
-            <Sparkles className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              AI Prompt Builder
-            </h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                  AI Prompt Builder
+                </h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Erstelle perfekte Prompts für deine AI-Bilder
+                </p>
+              </div>
+            </div>
+            <ThemeToggle />
           </div>
-          <p className="text-center text-muted-foreground mt-2">
-            Erstelle perfekte Prompts für deine AI-Bilder
-          </p>
         </div>
       </header>
 
