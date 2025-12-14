@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { CommandPalette } from "@/components/CommandPalette";
 import { HistoryDialog } from "@/components/HistoryDialog";
+import { TemplateDialog } from "@/components/TemplateDialog";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { Undo, Redo } from "lucide-react";
 import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
@@ -322,6 +323,16 @@ const Index = () => {
     }
   };
 
+  const handleUpdateSelectedTerm = (oldTerm: string, newTerm: string) => {
+    setSelectedTerms((prev) =>
+      prev.map((t) => (t === oldTerm ? newTerm : t))
+    );
+  };
+
+  const handleLoadTemplate = (terms: string[]) => {
+    setSelectedTerms(terms);
+  };
+
   const handleReorderTerms = (categoryId: string, oldIndex: number, newIndex: number) => {
     setProjects(
       projects.map((p) =>
@@ -480,6 +491,10 @@ const Index = () => {
               >
                 <Redo className="h-4 w-4" />
               </Button>
+              <TemplateDialog
+                currentTerms={selectedTerms}
+                onLoadTemplate={handleLoadTemplate}
+              />
               <HistoryDialog />
               <SettingsDialog
                 onExport={handleExportData}
@@ -499,6 +514,7 @@ const Index = () => {
             onClear={handleClearSelection}
             onRemoveTerm={(term) => handleSelectTerm(term)}
             onReorder={setSelectedTerms}
+            onUpdateTerm={handleUpdateSelectedTerm}
           />
         </div>
 
