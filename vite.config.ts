@@ -77,11 +77,11 @@ export default defineConfig(({ mode }) => ({
             const ext = path.extname(normalized).toLowerCase();
             const type =
               ext === ".png" ? "image/png" :
-              ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
-              ext === ".gif" ? "image/gif" :
-              ext === ".webp" ? "image/webp" :
-              ext === ".svg" ? "image/svg+xml" :
-              "application/octet-stream";
+                ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
+                  ext === ".gif" ? "image/gif" :
+                    ext === ".webp" ? "image/webp" :
+                      ext === ".svg" ? "image/svg+xml" :
+                        "application/octet-stream";
             res.statusCode = 200;
             res.setHeader("Content-Type", type);
             fs.createReadStream(normalized).pipe(res);
@@ -160,4 +160,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  base: "./",
 }));
