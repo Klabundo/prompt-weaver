@@ -11,6 +11,15 @@ CURRENT_DIR = os.path.dirname(__file__)
 WEB_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "dist"))
 Js_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "web", "comfyui"))
 
+# DEBUG LOGGING TO FILE
+log_path = os.path.join(CURRENT_DIR, "debug_init.log")
+with open(log_path, "w", encoding="utf-8") as f:
+    f.write(f"PromptWeaver Init Started\n")
+    f.write(f"Root: {CURRENT_DIR}\n")
+    f.write(f"Web Root: {WEB_ROOT}\n")
+    f.write(f"Web Root Exists: {os.path.exists(WEB_ROOT)}\n")
+    f.write(f"JS Root Exists: {os.path.exists(Js_DIR)}\n")
+
 print(f"\n[PromptWeaver] ---------------------------------------------")
 print(f"[PromptWeaver] Initializing...")
 print(f"[PromptWeaver] Root Path: {CURRENT_DIR}")
