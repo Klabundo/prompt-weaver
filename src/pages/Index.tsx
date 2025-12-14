@@ -129,6 +129,30 @@ const Index = () => {
     return [];
   });
 
+  // New: Negative Prompt State
+  const {
+    state: selectedNegativeTerms,
+    setState: setSelectedNegativeTerms,
+    undo: undoNegative,
+    redo: redoNegative,
+    canUndo: canUndoNegative,
+    canRedo: canRedoNegative
+  } = useUndoRedo<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("selectedNegativeTerms");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed as string[];
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load selected negative terms from storage", e);
+    }
+    return [];
+  });
+  const [activePromptMode, setActivePromptMode] = useState<"positive" | "negative">("positive");
+
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -218,7 +242,8 @@ const Index = () => {
     toast.success(t('termAdded'));
   };
 
-  const handleRemoveTerm = (categoryId: string, term: string) => {
+  // This removes a term from a CATEGORY (Data)
+  const handleRemoveTermFromCategory = (categoryId: string, term: string) => {
     setProjects(
       projects.map((p) =>
         p.id === activeProjectId
@@ -236,7 +261,9 @@ const Index = () => {
           : p
       )
     );
-    setSelectedTerms(selectedTerms.filter((t) => t !== term));
+    // Also remove from selection if present? Optional, but safer to leave selection alone or remove it.
+    // Let's leave it in selection for now, or remove it.
+    // handleRemoveSelectedTerm(term); 
   };
 
   // handleAddSubcategory removed
@@ -281,7 +308,12 @@ const Index = () => {
     );
     // update selection if term text changed
     if (oldText !== newText) {
-      setSelectedTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
+      if (selectedTerms.includes(oldText)) {
+        setSelectedTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
+      }
+      if (selectedNegativeTerms.includes(oldText)) {
+        setSelectedNegativeTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
+      }
     }
   };
 
@@ -289,16 +321,39 @@ const Index = () => {
   // handleAddTermToSubcategory removed
   // handleRemoveTermFromSubcategory removed
 
-  const handleSelectTerm = (term: string) => {
-    if (selectedTerms.includes(term)) {
-      setSelectedTerms(selectedTerms.filter((t) => t !== term));
+  // -- SELECTION HANDLERS --
+
+  // Toggles selection (Add/Remove from Active List)
+  const handleTermClick = (term: string) => {
+    if (activePromptMode === "positive") {
+      if (selectedTerms.includes(term)) {
+        setSelectedTerms(selectedTerms.filter((t) => t !== term));
+      } else {
+        setSelectedTerms((prev) => [...prev, term]);
+      }
     } else {
-      setSelectedTerms([...selectedTerms, term]);
+      if (selectedNegativeTerms.includes(term)) {
+        setSelectedNegativeTerms(selectedNegativeTerms.filter((t) => t !== term));
+      } else {
+        setSelectedNegativeTerms((prev) => [...prev, term]);
+      }
+    }
+  };
+
+  // Removes from the *Active* Selection List (for the X button in Preview)
+  const handleRemoveSelectedTerm = (term: string) => {
+    if (activePromptMode === "positive") {
+      const newTerms = selectedTerms.filter((t) => t !== term);
+      setSelectedTerms(newTerms);
+    } else {
+      const newTerms = selectedNegativeTerms.filter((t) => t !== term);
+      setSelectedNegativeTerms(newTerms);
     }
   };
 
   const handleClearSelection = () => {
-    setSelectedTerms([]);
+    if (activePromptMode === "positive") setSelectedTerms([]);
+    else setSelectedNegativeTerms([]);
     toast.success(t('selectionCleared'));
   };
 
@@ -324,9 +379,19 @@ const Index = () => {
   };
 
   const handleUpdateSelectedTerm = (oldTerm: string, newTerm: string) => {
-    setSelectedTerms((prev) =>
-      prev.map((t) => (t === oldTerm ? newTerm : t))
-    );
+    // Check both lists or use active mode?
+    // Since we drag/update in the active list, we should target active mode OR search both.
+    // Safer to search both because sometimes UI might be desync (rare) but let's trust mode.
+
+    if (activePromptMode === "positive") {
+      setSelectedTerms((prev) =>
+        prev.map(t => t === oldTerm ? newTerm : t)
+      );
+    } else {
+      setSelectedNegativeTerms((prev) =>
+        prev.map(t => t === oldTerm ? newTerm : t)
+      );
+    }
   };
 
   const handleLoadTemplate = (terms: string[]) => {
@@ -507,17 +572,24 @@ const Index = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Prompt Preview */}
-        <div className="mb-8 animate-fade-in">
-          <PromptPreview
-            selectedTerms={selectedTerms}
-            onClear={handleClearSelection}
-            onRemoveTerm={(term) => handleSelectTerm(term)}
-            onReorder={setSelectedTerms}
-            onUpdateTerm={handleUpdateSelectedTerm}
-          />
+        {/* Prompt Preview & Selection */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-24 space-y-4">
+            <PromptPreview
+              selectedTerms={selectedTerms}
+              selectedNegativeTerms={selectedNegativeTerms}
+              activeMode={activePromptMode}
+              onModeChange={setActivePromptMode}
+              onClear={handleClearSelection}
+              onRemoveTerm={handleRemoveSelectedTerm}
+              onReorder={(newOrder) => {
+                if (activePromptMode === "positive") setSelectedTerms(newOrder);
+                else setSelectedNegativeTerms(newOrder);
+              }}
+              onUpdateTerm={handleUpdateSelectedTerm}
+            />
+          </div>
         </div>
-
         {/* Projects Tabs */}
         <Tabs value={activeProjectId} onValueChange={setActiveProjectId} className="mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -679,9 +751,9 @@ const Index = () => {
           onOpenChange={(open) => !open && setOpenCategoryId(null)}
           category={openCategory}
           onAddTerm={handleAddTerm}
-          onRemoveTerm={handleRemoveTerm}
-          onSelectTerm={handleSelectTerm}
-          selectedTerms={selectedTerms}
+          onRemoveTerm={handleRemoveTermFromCategory}
+          onSelectTerm={handleTermClick}
+          selectedTerms={activePromptMode === "positive" ? selectedTerms : selectedNegativeTerms}
           // onAddSubcategory={handleAddSubcategory} // Removed
           // onDeleteSubcategory={handleDeleteSubcategory} // Removed
           // onAddTermToSubcategory={handleAddTermToSubcategory} // Removed
@@ -709,7 +781,7 @@ const Index = () => {
 
       <CommandPalette
         projects={projects}
-        onSelectTerm={handleSelectTerm}
+        onSelectTerm={handleTermClick}
         onSelectCategory={(pid, cid) => {
           setActiveProjectId(pid);
           setOpenCategoryId(cid);

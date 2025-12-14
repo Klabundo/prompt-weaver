@@ -9,18 +9,19 @@ class PromptWeaverReceiver:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "prompt_text": ("STRING", {"multiline": True, "default": ""}),
+                "positive_text": ("STRING", {"multiline": True, "default": ""}),
+                "negative_text": ("STRING", {"multiline": True, "default": ""}),
             },
             "hidden": {"unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("prompt",)
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("positive", "negative")
     FUNCTION = "process"
     CATEGORY = "PromptWeaver"
     
-    def process(self, prompt_text, unique_id=None):
-        return (prompt_text,)
+    def process(self, positive_text, negative_text, unique_id=None):
+        return (positive_text, negative_text)
 
 # Node mapping
 NODE_CLASS_MAPPINGS = {

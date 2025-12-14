@@ -303,13 +303,16 @@ export const SettingsDialog = ({ onExport, onImport, onClearData }: SettingsDial
                   </Button>
                   <div className="mt-3 bg-muted p-2 rounded text-[10px] text-muted-foreground leading-relaxed">
                     <strong>Installation:</strong>
-                    <ol className="list-decimal list-inside mt-1 space-y-1">
-                      <li>ZIP herunterladen.</li>
-                      <li>Entpacken in: <code>ComfyUI/custom_nodes/</code></li>
-                      <li>Es sollte so aussehen: <code>custom_nodes/PromptWeaver/</code></li>
+                    <ol className="list-decimal list-inside mt-1 space-y-1 mb-2">
+                      <li>ZIP herunterladen & entpacken nach <code>ComfyUI/custom_nodes/PromptWeaver/</code></li>
                       <li>ComfyUI neustarten.</li>
                     </ol>
-                    <p className="mt-2 text-primary font-medium">✨ Fügt auch einen "Open Prompt Weaver" Button in ComfyUI hinzu!</p>
+                    <strong>Nutzung:</strong>
+                    <ol className="list-decimal list-inside mt-1 space-y-1">
+                      <li>Rechtsklick in ComfyUI &rarr; <code>Add Node &rarr; PromptWeaver</code>.</li>
+                      <li><strong>Wichtig:</strong> Rechtsklick auf deine <code>CLIP Text Encode</code> Node &rarr; <code>Convert text to input</code> auswählen.</li>
+                      <li>Verbinde die <code>Prompt Weaver Receiver</code> Node mit dem neuen Input.</li>
+                    </ol>
                   </div>
                 </div>
 
