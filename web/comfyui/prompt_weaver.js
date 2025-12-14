@@ -1,8 +1,11 @@
 import { app } from "../../scripts/app.js";
 import { ComfyButton } from "../../scripts/ui/components/button.js";
+import { ComfyButtonGroup } from "../../scripts/ui/components/buttonGroup.js";
 
 // ID for our custom overlay
 const MODAL_ID = "prompt-weaver-modal";
+const BUTTON_TOOLTIP = "Launch Prompt Weaver (Shift+Click opens in new window)";
+const NEW_WINDOW_FEATURES = "width=1200,height=800,resizable=yes,scrollbars=yes,status=yes";
 
 const getIcon = () => {
     // This is the icon from Lora Manager, slightly modified (color) to satisfy the request
@@ -13,102 +16,16 @@ const getIcon = () => {
     `;
 };
 
-const createOverlay = () => {
-    // Check if already open
-    if (document.getElementById(MODAL_ID)) return;
+const openPromptWeaver = (event) => {
+    // Open clean URL (server handles index.html and assets)
+    const url = "/prompt_weaver/";
 
-    // 1. Create Overlay
-    const overlay = document.createElement("div");
-    overlay.id = MODAL_ID;
-    Object.assign(overlay.style, {
-        position: "fixed",
-        top: "0",
-        left: "0",
-        width: "100%",
-        height: "100%",
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
-        zIndex: "9999",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backdropFilter: "blur(5px)"
-    });
+    if (event.shiftKey) {
+        window.open(url, "PromptWeaverWindow", NEW_WINDOW_FEATURES);
+        return;
+    }
 
-    // 2. Create Modal Container
-    const modal = document.createElement("div");
-    Object.assign(modal.style, {
-        width: "90%",
-        height: "90%",
-        backgroundColor: "#1e1e1e",
-        borderRadius: "12px",
-        boxShadow: "0 0 50px rgba(0,0,0,0.5)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        border: "1px solid #333"
-    });
-
-    // 3. Header
-    const header = document.createElement("div");
-    Object.assign(header.style, {
-        padding: "10px 20px",
-        backgroundColor: "#2a2a2a",
-        borderBottom: "1px solid #333",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        color: "white",
-        fontFamily: "sans-serif"
-    });
-
-    const title = document.createElement("h3");
-    title.textContent = "Prompt Weaver";
-    title.style.margin = "0";
-
-    const closeBtn = document.createElement("button");
-    closeBtn.textContent = "✕";
-    Object.assign(closeBtn.style, {
-        background: "transparent",
-        border: "none",
-        color: "#ff6b6b",
-        fontSize: "20px",
-        cursor: "pointer",
-        fontWeight: "bold"
-    });
-
-    const close = () => overlay.remove();
-    closeBtn.onclick = close;
-
-    header.append(title, closeBtn);
-
-    // 4. Iframe pointing to the static route
-    const iframe = document.createElement("iframe");
-    iframe.src = "/prompt_weaver_app/index.html";
-    Object.assign(iframe.style, {
-        width: "100%",
-        height: "100%",
-        border: "none",
-        background: "#000"
-    });
-
-    // Assemble
-    modal.append(header, iframe);
-    overlay.append(modal);
-    document.body.append(overlay);
-
-    // Close on click outside
-    overlay.onclick = (e) => {
-        if (e.target === overlay) close();
-    };
-
-    // Handle ESC key
-    const escHandler = (e) => {
-        if (e.key === "Escape") {
-            close();
-            document.removeEventListener("keydown", escHandler);
-        }
-    };
-    document.addEventListener("keydown", escHandler);
+    window.open(url, "_blank");
 };
 
 // Register the extension
@@ -128,7 +45,7 @@ app.registerExtension({
         const addClassAndAddButton = (settingsGroup) => {
             const button = new ComfyButton({
                 icon: "prompt-weaver-icon", // Placeholder, we inject SVG below
-                tooltip: "Open Prompt Weaver",
+                tooltip: BUTTON_TOOLTIP,
                 app,
                 enabled: true,
                 classList: "comfyui-button comfyui-menu-mobile-collapse primary"
@@ -141,10 +58,11 @@ app.registerExtension({
                 button.iconElement.style.height = "1.2rem";
             }
 
-            button.element.onclick = createOverlay;
+            button.element.onclick = openPromptWeaver;
 
+            const buttonGroup = new ComfyButtonGroup(button);
             // Insert before the settings group (like Lora Manager)
-            settingsGroup.element.before(button.element);
+            settingsGroup.element.before(buttonGroup.element);
         };
 
         waitForSettings();

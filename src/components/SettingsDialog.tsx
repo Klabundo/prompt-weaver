@@ -170,7 +170,7 @@ export const SettingsDialog = ({ onExport, onImport, onClearData }: SettingsDial
           <span className="sr-only">{t('settings')}</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{t('settingsTitle')}</SheetTitle>
           <SheetDescription>
@@ -178,7 +178,7 @@ export const SettingsDialog = ({ onExport, onImport, onClearData }: SettingsDial
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-6 py-6">
+        <div className="space-y-6 py-6 h-full">
           {/* Appearance Section */}
           <div className="space-y-4">
             <div>
@@ -280,107 +280,7 @@ export const SettingsDialog = ({ onExport, onImport, onClearData }: SettingsDial
 
           <Separator />
 
-          {/* ComfyUI Integration Section */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Rocket className="h-5 w-5" />
-                ComfyUI Integration
-              </h3>
-
-              <div className="space-y-3 bg-muted/30 p-4 rounded-lg border border-border">
-                {/* Step 1: Install Node */}
-                <div className="border-b border-border pb-3 mb-3">
-                  <h4 className="text-sm font-medium mb-2">Schritt 1: Plugin installieren (ZIP)</h4>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Installiere unser Plugin für eine bessere Integration & "Open UI" Button in ComfyUI.
-                  </p>
-                  <Button variant="outline" size="sm" className="w-full gap-2" asChild>
-                    <a href="/PromptWeaverNode.zip" download="PromptWeaverNode.zip">
-                      <Download className="h-4 w-4" />
-                      Plugin herunterladen (.zip)
-                    </a>
-                  </Button>
-                  <div className="mt-3 bg-muted p-2 rounded text-[10px] text-muted-foreground leading-relaxed">
-                    <strong>Installation:</strong>
-                    <ol className="list-decimal list-inside mt-1 space-y-1 mb-2">
-                      <li>ZIP herunterladen & entpacken nach <code>ComfyUI/custom_nodes/PromptWeaver/</code></li>
-                      <li>ComfyUI neustarten.</li>
-                    </ol>
-                    <strong>Nutzung:</strong>
-                    <ol className="list-decimal list-inside mt-1 space-y-1">
-                      <li>Rechtsklick in ComfyUI &rarr; <code>Add Node &rarr; PromptWeaver</code>.</li>
-                      <li><strong>Wichtig:</strong> Rechtsklick auf deine <code>CLIP Text Encode</code> Node &rarr; <code>Convert text to input</code> auswählen.</li>
-                      <li>Verbinde die <code>Prompt Weaver Receiver</code> Node mit dem neuen Input.</li>
-                    </ol>
-                  </div>
-                </div>
-
-                {/* Step 2: Configure */}
-                <h4 className="text-sm font-medium mb-2">Schritt 2: Verbindung</h4>
-                <div className="grid gap-2">
-                  <Label htmlFor="comfy-host">ComfyUI URL</Label>
-                  <Input
-                    id="comfy-host"
-                    value={comfyHost}
-                    onChange={(e) => setComfyHost(e.target.value)}
-                    placeholder="http://127.0.0.1:8188"
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="pt-2 flex flex-col gap-2">
-                  <Button
-                    onClick={handleAutoDetect}
-                    variant="secondary"
-                    size="sm"
-                    className="w-full gap-2"
-                    disabled={isDetecting}
-                  >
-                    {isDetecting ? (
-                      <span className="animate-spin">⏳</span>
-                    ) : (
-                      <Rocket className="h-4 w-4" />
-                    )}
-                    Autom. Verbinden & Node finden
-                  </Button>
-
-                  {detectedNodeId && (
-                    <div className="text-xs text-green-500 flex items-center gap-1 justify-center bg-green-500/10 p-1 rounded">
-                      <Check className="h-3 w-3" />
-                      Node gefunden (ID: {detectedNodeId})
-                    </div>
-                  )}
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">oder manuell</span>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="comfy-node" className="text-xs">Node ID manuell</Label>
-                    </div>
-                    <Input
-                      id="comfy-node"
-                      value={comfyNodeId}
-                      onChange={(e) => setComfyNodeId(e.target.value)}
-                      placeholder="z.B. 6"
-                      className="bg-background h-8 text-xs"
-                    />
-                  </div>
-
-                  <Button onClick={handleSaveComfyConfig} size="sm" className="w-full mt-2">
-                    Einstellungen Speichern
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* ComfyUI Integration Section Removed */}
         </div>
       </SheetContent>
     </Sheet>

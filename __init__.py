@@ -1,57 +1,12 @@
-import os
-import shutil
-import folder_paths
-import server
-from aiohttp import web
+from .py.prompt_weaver import PromptWeaver
+import importlib
 
 # ----------------------------------------------------------------------------
-# 1. Setup Paths
-# ----------------------------------------------------------------------------
-CURRENT_DIR = os.path.dirname(__file__)
-WEB_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "dist"))
-Js_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "web", "comfyui"))
-
-# DEBUG LOGGING TO FILE
-log_path = os.path.join(CURRENT_DIR, "debug_init.log")
-with open(log_path, "w", encoding="utf-8") as f:
-    f.write(f"PromptWeaver Init Started\n")
-    f.write(f"Root: {CURRENT_DIR}\n")
-    f.write(f"Web Root: {WEB_ROOT}\n")
-    f.write(f"Web Root Exists: {os.path.exists(WEB_ROOT)}\n")
-    f.write(f"JS Root Exists: {os.path.exists(Js_DIR)}\n")
-
-print(f"\n[PromptWeaver] ---------------------------------------------")
-print(f"[PromptWeaver] Initializing...")
-print(f"[PromptWeaver] Root Path: {CURRENT_DIR}")
-print(f"[PromptWeaver] Web Root (Dist): {WEB_ROOT}")
-print(f"[PromptWeaver] JS Root: {Js_DIR}")
-
-# ----------------------------------------------------------------------------
-# 2. Setup Static Routes (The 404 Fix)
-# ----------------------------------------------------------------------------
-def setup_routes():
-    try:
-        if os.path.exists(WEB_ROOT) and os.path.isdir(WEB_ROOT):
-             # Ensure we have an index.html
-            index_path = os.path.join(WEB_ROOT, "index.html")
-            if os.path.exists(index_path):
-                # Register the ALL-CATCHING static route for the app
-                server.PromptServer.instance.app.router.add_static("/prompt_weaver_app", WEB_ROOT, follow_symlinks=True)
-                print(f"[PromptWeaver] 🟢 SUCCESS: Static route '/prompt_weaver_app' registered -> {WEB_ROOT}")
-            else:
-                print(f"[PromptWeaver] 🔴 ERROR: 'dist' exists but no 'index.html' found inside!")
-        else:
-             print(f"[PromptWeaver] 🔴 ERROR: 'dist' folder NOT found. Did you run 'npm run build'?")
-    except Exception as e:
-        print(f"[PromptWeaver] 🔴 EXCEPTION during route setup: {e}")
-
-setup_routes()
-
-# ----------------------------------------------------------------------------
-# 3. Load Nodes
+# Initialize Backend
 # ----------------------------------------------------------------------------
 try:
-    from .PromptWeaverNode import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+    # Import nodes from the new py/ location
+    from .py.nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
     print(f"[PromptWeaver] 🟢 Nodes loaded successfully.")
 except ImportError as e:
     print(f"[PromptWeaver] 🔴 Failed to import nodes: {e}")
@@ -59,9 +14,14 @@ except ImportError as e:
     NODE_DISPLAY_NAME_MAPPINGS = {}
 
 # ----------------------------------------------------------------------------
-# 4. Export WEB_DIRECTORY for JS loading
+# Register Routes
+# ----------------------------------------------------------------------------
+PromptWeaver.add_routes()
+
+# ----------------------------------------------------------------------------
+# Export
 # ----------------------------------------------------------------------------
 WEB_DIRECTORY = "./web/comfyui"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 
-print(f"[PromptWeaver] ---------------------------------------------\n")
+print(f"[PromptWeaver] Initialization complete.")

@@ -24,13 +24,11 @@ import { DroppableArea } from "./DroppableArea";
 
 interface PromptPreviewProps {
   selectedTerms: string[];
-  selectedNegativeTerms: string[];
-  activeMode: "positive" | "negative";
-  onModeChange: (mode: "positive" | "negative") => void;
   onClear: () => void;
   onRemoveTerm?: (term: string) => void;
   onReorder?: (newOrder: string[]) => void;
   onUpdateTerm: (oldTerm: string, newTerm: string) => void;
+  targetNodeId: number | null;
 }
 
 export const PromptPreview = ({
@@ -41,7 +39,8 @@ export const PromptPreview = ({
   onClear,
   onRemoveTerm,
   onReorder,
-  onUpdateTerm
+  onUpdateTerm,
+  targetNodeId
 }: PromptPreviewProps) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -54,10 +53,6 @@ export const PromptPreview = ({
   const currentList = activeMode === "positive" ? selectedTerms : selectedNegativeTerms;
   const prompt = currentList.join(", ");
 
-  // For sending, we need both
-  const positivePrompt = selectedTerms.join(", ");
-  const negativePrompt = selectedNegativeTerms.join(", ");
-
   const handleCopy = () => {
     if (prompt) {
       navigator.clipboard.writeText(prompt);
@@ -69,43 +64,47 @@ export const PromptPreview = ({
   };
 
   const handleSendToComfy = async () => {
-    const saved = localStorage.getItem("comfy-config");
-    if (!saved) {
-      toast.error(t('comfyConfigMissing'));
+    if (!targetNodeId) {
+      toast.error("Bitte wähle zuerst eine Target Node aus (oben).");
       return;
     }
-    const { host, nodeId } = JSON.parse(saved);
 
     try {
-      toast.info("Sende Prompts an ComfyUI...");
+      // @ts-ignore
+      const app = window.opener?.app;
+      if (!app || !app.graph) {
+        toast.error("Keine Verbindung zu ComfyUI (Popup Mode erforderlich).");
+        return;
+      }
 
-      const payload = {
-        client_id: "prompt-weaver",
-        prompt: {
-          [nodeId]: {
-            inputs: {
-              positive_text: positivePrompt,
-              negative_text: negativePrompt
-            },
-            class_type: "PromptWeaverReceiver"
-          }
-        }
-      };
+      const node = app.graph.getNodeById(targetNodeId);
+      if (!node) {
+        toast.error(`Node #${targetNodeId} nicht gefunden.`);
+        return;
+      }
 
-      // Fallback Copy (Active)
-      navigator.clipboard.writeText(prompt);
+      // Find the text widget. Usually 'text' or widgets[0] for primitives/CLIPTextEncode
+      // We look for specific names or fallback to the first string widget
+      const textWidget = node.widgets?.find((w: any) =>
+        w.name === "text" ||
+        w.name === "text_g" ||
+        w.name === "text_l" ||
+        w.name === "string"
+      );
 
-      // Try to send (This assumes user has the node)
-      // Since we can't really execute without full graph, we just emulate.
-      // But wait! If we provided a JS extension, could we use window.postMessage?
-      // No, different origin usually.
+      if (textWidget) {
+        textWidget.value = prompt;
+        app.graph.setDirtyCanvas(true, true);
+        toast.success(`Prompt an Node #${targetNodeId} gesendet!`);
 
-      // Let's just do the Copy + Toast as agreed.
-      toast.success(`Active Prompt (${activeMode}) kopiert!`);
-      toast.message("Falls Node verbunden: Senden simuliert.");
+        // Optional: Queue Prompt? No, user might want to adjust other things.
+      } else {
+        toast.error(`Kein Text-Widget auf Node #${targetNodeId} gefunden.`);
+      }
 
     } catch (e) {
-      toast.error("Verbindung zu ComfyUI fehlgeschlagen");
+      console.error(e);
+      toast.error("Fehler beim Senden an ComfyUI.");
     }
   };
 
@@ -120,7 +119,7 @@ export const PromptPreview = ({
   };
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-card">
+    <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-card max-h-[80vh] overflow-y-auto custom-scrollbar">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-foreground">{t('selectedTermsTitle')}</h2>
 

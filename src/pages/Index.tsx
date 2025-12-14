@@ -18,6 +18,10 @@ import { Undo, Redo } from "lucide-react";
 import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { SortableCategoryCard } from "@/components/SortableCategoryCard";
+import { SortableCategoryCard } from "@/components/SortableCategoryCard";
+import { NodeSelector } from "@/components/NodeSelector";
+import { TemplatesView } from "@/components/TemplatesView";
+import { LayoutGrid, PenTool } from "lucide-react";
 
 interface Term {
   text: string;
@@ -106,6 +110,19 @@ const Index = () => {
     const stored = localStorage.getItem("activeProjectId");
     return stored || projects[0]?.id || "";
   });
+  const [targetNodeId, setTargetNodeId] = useState<number | null>(() => {
+    const saved = localStorage.getItem("targetNodeId");
+    return saved ? parseInt(saved) : null;
+  });
+  const [batchCount, setBatchCount] = useState(1);
+  const [isQueueing, setIsQueueing] = useState(false);
+
+  // Auto-save targetNodeId
+  useEffect(() => {
+    if (targetNodeId !== null) {
+      localStorage.setItem("targetNodeId", targetNodeId.toString());
+    }
+  }, [targetNodeId]);
 
   const {
     state: selectedTerms,
@@ -129,29 +146,11 @@ const Index = () => {
     return [];
   });
 
-  // New: Negative Prompt State
-  const {
-    state: selectedNegativeTerms,
-    setState: setSelectedNegativeTerms,
-    undo: undoNegative,
-    redo: redoNegative,
-    canUndo: canUndoNegative,
-    canRedo: canRedoNegative
-  } = useUndoRedo<string[]>(() => {
-    try {
-      const stored = localStorage.getItem("selectedNegativeTerms");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed as string[];
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load selected negative terms from storage", e);
-    }
-    return [];
-  });
-  const [activePromptMode, setActivePromptMode] = useState<"positive" | "negative">("positive");
+  // View State
+  const [activeView, setActiveView] = useState<"editor" | "templates">("editor");
+
+  // Legacy Negative Prompt logic removed.
+  // We keep the hook structure clean but remove the negative terms state.
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -311,9 +310,6 @@ const Index = () => {
       if (selectedTerms.includes(oldText)) {
         setSelectedTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
       }
-      if (selectedNegativeTerms.includes(oldText)) {
-        setSelectedNegativeTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
-      }
     }
   };
 
@@ -325,35 +321,21 @@ const Index = () => {
 
   // Toggles selection (Add/Remove from Active List)
   const handleTermClick = (term: string) => {
-    if (activePromptMode === "positive") {
-      if (selectedTerms.includes(term)) {
-        setSelectedTerms(selectedTerms.filter((t) => t !== term));
-      } else {
-        setSelectedTerms((prev) => [...prev, term]);
-      }
+    if (selectedTerms.includes(term)) {
+      setSelectedTerms(selectedTerms.filter((t) => t !== term));
     } else {
-      if (selectedNegativeTerms.includes(term)) {
-        setSelectedNegativeTerms(selectedNegativeTerms.filter((t) => t !== term));
-      } else {
-        setSelectedNegativeTerms((prev) => [...prev, term]);
-      }
+      setSelectedTerms((prev) => [...prev, term]);
     }
   };
 
   // Removes from the *Active* Selection List (for the X button in Preview)
   const handleRemoveSelectedTerm = (term: string) => {
-    if (activePromptMode === "positive") {
-      const newTerms = selectedTerms.filter((t) => t !== term);
-      setSelectedTerms(newTerms);
-    } else {
-      const newTerms = selectedNegativeTerms.filter((t) => t !== term);
-      setSelectedNegativeTerms(newTerms);
-    }
+    const newTerms = selectedTerms.filter((t) => t !== term);
+    setSelectedTerms(newTerms);
   };
 
   const handleClearSelection = () => {
-    if (activePromptMode === "positive") setSelectedTerms([]);
-    else setSelectedNegativeTerms([]);
+    setSelectedTerms([]);
     toast.success(t('selectionCleared'));
   };
 
@@ -379,19 +361,9 @@ const Index = () => {
   };
 
   const handleUpdateSelectedTerm = (oldTerm: string, newTerm: string) => {
-    // Check both lists or use active mode?
-    // Since we drag/update in the active list, we should target active mode OR search both.
-    // Safer to search both because sometimes UI might be desync (rare) but let's trust mode.
-
-    if (activePromptMode === "positive") {
-      setSelectedTerms((prev) =>
-        prev.map(t => t === oldTerm ? newTerm : t)
-      );
-    } else {
-      setSelectedNegativeTerms((prev) =>
-        prev.map(t => t === oldTerm ? newTerm : t)
-      );
-    }
+    setSelectedTerms((prev) =>
+      prev.map(t => t === oldTerm ? newTerm : t)
+    );
   };
 
   const handleLoadTemplate = (terms: string[]) => {
@@ -458,6 +430,31 @@ const Index = () => {
     setProjects([]);
     setSelectedTerms([]);
     toast.success(t('allDataCleared'));
+  };
+
+  const handleQueuePrompt = async () => {
+    setIsQueueing(true);
+    try {
+      // @ts-ignore
+      const app = window.opener?.app;
+      if (!app) {
+        toast.error("Nicht mit ComfyUI verbunden (Popup Mode erforderlich).");
+        return;
+      }
+
+      // queuePrompt(number, batchCount)
+      // Usually number is 0 for adding to end of queue? Or -1? 
+      // app.queuePrompt(0, batchCount);
+
+      await app.queuePrompt(0, batchCount);
+      toast.success(`Gestartet! (${batchCount}x)`);
+
+    } catch (e) {
+      console.error(e);
+      toast.error("Fehler beim Starten der Generierung.");
+    } finally {
+      setIsQueueing(false);
+    }
   };
 
   // Load from file-based storage on mount (if available)
@@ -556,16 +553,36 @@ const Index = () => {
               >
                 <Redo className="h-4 w-4" />
               </Button>
-              <TemplateDialog
-                currentTerms={selectedTerms}
-                onLoadTemplate={handleLoadTemplate}
-              />
               <HistoryDialog />
               <SettingsDialog
                 onExport={handleExportData}
                 onImport={handleImportData}
                 onClearData={handleClearAllData}
               />
+            </div>
+          </div>
+
+          {/* Main View Switcher */}
+          <div className="flex justify-center mt-6">
+            <div className="bg-muted p-1 rounded-lg flex gap-1">
+              <Button
+                variant={activeView === "editor" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setActiveView("editor")}
+                className="gap-2 min-w-[120px]"
+              >
+                <PenTool className="h-4 w-4" />
+                Editor
+              </Button>
+              <Button
+                variant={activeView === "templates" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setActiveView("templates")}
+                className="gap-2 min-w-[120px]"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Templates
+              </Button>
             </div>
           </div>
         </div>
@@ -575,195 +592,255 @@ const Index = () => {
         {/* Prompt Preview & Selection */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-4">
-            <PromptPreview
-              selectedTerms={selectedTerms}
-              selectedNegativeTerms={selectedNegativeTerms}
-              activeMode={activePromptMode}
-              onModeChange={setActivePromptMode}
-              onClear={handleClearSelection}
-              onRemoveTerm={handleRemoveSelectedTerm}
-              onReorder={(newOrder) => {
-                if (activePromptMode === "positive") setSelectedTerms(newOrder);
-                else setSelectedNegativeTerms(newOrder);
-              }}
-              onUpdateTerm={handleUpdateSelectedTerm}
-            />
-          </div>
-        </div>
-        {/* Projects Tabs */}
-        <Tabs value={activeProjectId} onValueChange={setActiveProjectId} className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <TabsList className="bg-muted">
-              {projects.map((project) => (
-                <TabsTrigger
-                  key={project.id}
-                  value={project.id}
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  {project.name}
-                  {projects.length > 1 && (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteProjectDialog({ open: true, projectId: project.id });
-                      }}
-                      className="ml-2 hover:text-destructive cursor-pointer inline-flex items-center"
-                      role="button"
-                      aria-label={t('deleteProject')}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </span>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {!showNewProject && (
-              <Button
-                onClick={() => setShowNewProject(true)}
-                variant="outline"
-                size="sm"
-                className="border-border"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {t('newProject')}
-              </Button>
-            )}
-          </div>
-
-          {showNewProject && (
-            <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
-              <div className="flex gap-2">
-                <Input
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleAddProject()}
-                  placeholder="Projektname eingeben..."
-                  className="flex-1 border-border"
-                  autoFocus
-                />
-                <Button onClick={handleAddProject} className="bg-primary">
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('add')}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowNewProject(false);
-                    setNewProjectName("");
-                  }}
-                  variant="outline"
-                >
-                  {t('cancel')}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {projects.map((project) => (
-            <TabsContent key={project.id} value={project.id}>
-              {/* Categories Section */}
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-foreground">{t('categories')}</h2>
-                {!showNewCategory && (
-                  <Button
-                    onClick={() => setShowNewCategory(true)}
-                    className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t('newCategory')}
-                  </Button>
-                )}
+            {/* Control Panel */}
+            <div className="bg-card rounded-xl p-5 border border-border shadow-sm transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold tracking-tight">ComfyUI Control</h3>
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${targetNodeId ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-yellow-500'}`}></span>
+                  <span className="text-[10px] uppercase font-mono text-muted-foreground">
+                    {targetNodeId ? "Connected" : "Waiting"}
+                  </span>
+                </div>
               </div>
 
-              {showNewCategory && (
-                <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
-                  <div className="flex gap-2">
-                    <Input
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
-                      placeholder="Kategoriename eingeben..."
-                      className="flex-1 border-border"
-                      autoFocus
-                    />
-                    <Button onClick={handleAddCategory} className="bg-primary">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Hinzufügen
-                    </Button>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Target Node</label>
+                  <NodeSelector
+                    selectedNodeId={targetNodeId}
+                    onNodeSelect={setTargetNodeId}
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-border/50">
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-medium text-muted-foreground">Batch Count</span>
+                        <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[10px]">{batchCount}</span>
+                      </div>
+                      <Input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={batchCount}
+                        onChange={(e) => setBatchCount(parseInt(e.target.value))}
+                        className="h-5 accent-primary cursor-pointer"
+                      />
+                    </div>
                     <Button
-                      onClick={() => {
-                        setShowNewCategory(false);
-                        setNewCategoryName("");
-                      }}
-                      variant="outline"
+                      size="sm"
+                      onClick={handleQueuePrompt}
+                      disabled={isQueueing || !targetNodeId}
+                      className={`min-w-[100px] font-medium shadow-sm transition-all ${isQueueing ? 'opacity-80' : 'hover:scale-105 active:scale-95'
+                        } ${!targetNodeId ? 'opacity-50 cursor-not-allowed' : 'bg-gradient-primary text-white shadow-glow'}`}
                     >
-                      Abbrechen
+                      {isQueueing ? (
+                        <span className="flex items-center gap-1">
+                          <span className="h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Wait...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Generate
+                        </span>
+                      )}
                     </Button>
                   </div>
                 </div>
-              )}
-
-              {/* Categories Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <DndContext
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEndCategory}
-                  sensors={useSensors(
-                    useSensor(PointerSensor, {
-                      activationConstraint: {
-                        distance: 8,
-                      },
-                    })
-                  )}
-                >
-                  <SortableContext
-                    items={project.categories.map((c) => c.id)}
-                    strategy={rectSortingStrategy}
-                  >
-                    {project.categories.map((category) => (
-                      <SortableCategoryCard
-                        key={category.id}
-                        category={category}
-                        onDeleteCategory={handleDeleteCategory}
-                        onOpenCategory={setOpenCategoryId}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
               </div>
+            </div>
 
-              {project.categories.length === 0 && (
-                <div className="text-center py-16 text-muted-foreground">
-                  <Sparkles className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">
-                    Erstelle deine erste Kategorie in "{project.name}"!
-                  </p>
-                </div>
+            <PromptPreview
+              selectedTerms={selectedTerms}
+              onClear={handleClearSelection}
+              onRemoveTerm={handleRemoveSelectedTerm}
+              onReorder={setSelectedTerms}
+              onUpdateTerm={handleUpdateSelectedTerm}
+              targetNodeId={targetNodeId}
+            />
+          </div>
+        </div>
+        {activeView === "templates" ? (
+          <TemplatesView onLoadTemplate={handleLoadTemplate} />
+        ) : (
+          <Tabs value={activeProjectId} onValueChange={setActiveProjectId} className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <TabsList className="bg-muted">
+                {projects.map((project) => (
+                  <TabsTrigger
+                    key={project.id}
+                    value={project.id}
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    {project.name}
+                    {projects.length > 1 && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteProjectDialog({ open: true, projectId: project.id });
+                        }}
+                        className="ml-2 hover:text-destructive cursor-pointer inline-flex items-center"
+                        role="button"
+                        aria-label={t('deleteProject')}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </span>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {!showNewProject && (
+                <Button
+                  onClick={() => setShowNewProject(true)}
+                  variant="outline"
+                  size="sm"
+                  className="border-border"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('newProject')}
+                </Button>
               )}
-            </TabsContent>
-          ))}
-        </Tabs>
+            </div>
+
+            {showNewProject && (
+              <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
+                <div className="flex gap-2">
+                  <Input
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleAddProject()}
+                    placeholder="Projektname eingeben..."
+                    className="flex-1 border-border"
+                    autoFocus
+                  />
+                  <Button onClick={handleAddProject} className="bg-primary">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('add')}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowNewProject(false);
+                      setNewProjectName("");
+                    }}
+                    variant="outline"
+                  >
+                    {t('cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {projects.map((project) => (
+              <TabsContent key={project.id} value={project.id}>
+                {/* Categories Section */}
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-foreground">{t('categories')}</h2>
+                  {!showNewCategory && (
+                    <Button
+                      onClick={() => setShowNewCategory(true)}
+                      className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('newCategory')}
+                    </Button>
+                  )}
+                </div>
+
+                {showNewCategory && (
+                  <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
+                    <div className="flex gap-2">
+                      <Input
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
+                        placeholder="Kategoriename eingeben..."
+                        className="flex-1 border-border"
+                        autoFocus
+                      />
+                      <Button onClick={handleAddCategory} className="bg-primary">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Hinzufügen
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setShowNewCategory(false);
+                          setNewCategoryName("");
+                        }}
+                        variant="outline"
+                      >
+                        Abbrechen
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Categories Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <DndContext
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEndCategory}
+                    sensors={useSensors(
+                      useSensor(PointerSensor, {
+                        activationConstraint: {
+                          distance: 8,
+                        },
+                      })
+                    )}
+                  >
+                    <SortableContext
+                      items={project.categories.map((c) => c.id)}
+                      strategy={rectSortingStrategy}
+                    >
+                      {project.categories.map((category) => (
+                        <SortableCategoryCard
+                          key={category.id}
+                          category={category}
+                          onDeleteCategory={handleDeleteCategory}
+                          onOpenCategory={setOpenCategoryId}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </div>
+
+                {project.categories.length === 0 && (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <Sparkles className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg">
+                      Erstelle deine erste Kategorie in "{project.name}"!
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
       </main>
 
-      {openCategory && (
-        <CategoryDetailDialog
-          open={openCategoryId !== null}
-          onOpenChange={(open) => !open && setOpenCategoryId(null)}
-          category={openCategory}
-          onAddTerm={handleAddTerm}
-          onRemoveTerm={handleRemoveTermFromCategory}
-          onSelectTerm={handleTermClick}
-          selectedTerms={activePromptMode === "positive" ? selectedTerms : selectedNegativeTerms}
-          // onAddSubcategory={handleAddSubcategory} // Removed
-          // onDeleteSubcategory={handleDeleteSubcategory} // Removed
-          // onAddTermToSubcategory={handleAddTermToSubcategory} // Removed
-          // onRemoveTermFromSubcategory={handleRemoveTermFromSubcategory} // Removed
-          onRenameCategory={handleRenameCategory}
-          onEditTerm={handleEditTerm}
-          onReorderTerms={handleReorderTerms}
-        // onEditTermInSubcategory={handleEditTermInSubcategory} // Removed
-        />
-      )}
+      {
+        openCategory && (
+          <CategoryDetailDialog
+            open={openCategoryId !== null}
+            onOpenChange={(open) => !open && setOpenCategoryId(null)}
+            category={openCategory}
+            onAddTerm={handleAddTerm}
+            onRemoveTerm={handleRemoveTermFromCategory}
+            onSelectTerm={handleTermClick}
+            selectedTerms={activePromptMode === "positive" ? selectedTerms : selectedNegativeTerms}
+            // onAddSubcategory={handleAddSubcategory} // Removed
+            // onDeleteSubcategory={handleDeleteSubcategory} // Removed
+            // onAddTermToSubcategory={handleAddTermToSubcategory} // Removed
+            // onRemoveTermFromSubcategory={handleRemoveTermFromSubcategory} // Removed
+            onRenameCategory={handleRenameCategory}
+            onEditTerm={handleEditTerm}
+            onReorderTerms={handleReorderTerms}
+          // onEditTermInSubcategory={handleEditTermInSubcategory} // Removed
+          />
+        )
+      }
 
       <DeleteConfirmDialog
         open={deleteProjectDialog.open}
@@ -787,7 +864,7 @@ const Index = () => {
           setOpenCategoryId(cid);
         }}
       />
-    </div>
+    </div >
   );
 };
 
