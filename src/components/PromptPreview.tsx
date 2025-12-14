@@ -33,9 +33,6 @@ interface PromptPreviewProps {
 
 export const PromptPreview = ({
   selectedTerms,
-  selectedNegativeTerms,
-  activeMode,
-  onModeChange,
   onClear,
   onRemoveTerm,
   onReorder,
@@ -50,7 +47,7 @@ export const PromptPreview = ({
     useSensor(KeyboardSensor)
   );
 
-  const currentList = activeMode === "positive" ? selectedTerms : selectedNegativeTerms;
+  const currentList = selectedTerms;
   const prompt = currentList.join(", ");
 
   const handleCopy = () => {
@@ -123,22 +120,6 @@ export const PromptPreview = ({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-foreground">{t('selectedTermsTitle')}</h2>
 
-        {/* Mode Switcher */}
-        <div className="flex bg-muted rounded-lg p-1 mx-2">
-          <button
-            onClick={() => onModeChange("positive")}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${activeMode === "positive" ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Positive
-          </button>
-          <button
-            onClick={() => onModeChange("negative")}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${activeMode === "negative" ? "bg-background text-destructive shadow" : "text-muted-foreground hover:text-destructive"}`}
-          >
-            Negative
-          </button>
-        </div>
-
         <div className="flex gap-2">
           {currentList.length > 0 && (
             <>
@@ -164,7 +145,7 @@ export const PromptPreview = ({
               <Button
                 onClick={handleCopy}
                 size="sm"
-                className={activeMode === "negative" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"}
+                className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
               >
                 {copied ? (
                   <>
@@ -183,7 +164,7 @@ export const PromptPreview = ({
         </div>
       </div>
 
-      <div className={`bg-card rounded-lg p-4 min-h-[100px] border ${activeMode === "negative" ? "border-destructive/20" : "border-border"}`}>
+      <div className="bg-card rounded-lg p-4 min-h-[100px] border border-border">
         {currentList.length > 0 ? (
           <DndContext
             sensors={sensors}
@@ -209,7 +190,7 @@ export const PromptPreview = ({
           </DndContext>
         ) : (
           <p className="text-muted-foreground text-sm italic">
-            {activeMode === "positive" ? t('selectedTermsDescription') : "Keine negativen Begriffe gewählt."}
+            {t('selectedTermsDescription')}
           </p>
         )}
       </div>

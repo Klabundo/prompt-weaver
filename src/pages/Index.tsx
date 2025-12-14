@@ -18,10 +18,8 @@ import { Undo, Redo } from "lucide-react";
 import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { SortableCategoryCard } from "@/components/SortableCategoryCard";
-import { SortableCategoryCard } from "@/components/SortableCategoryCard";
 import { NodeSelector } from "@/components/NodeSelector";
-import { TemplatesView } from "@/components/TemplatesView";
-import { LayoutGrid, PenTool } from "lucide-react";
+
 
 interface Term {
   text: string;
@@ -146,8 +144,7 @@ const Index = () => {
     return [];
   });
 
-  // View State
-  const [activeView, setActiveView] = useState<"editor" | "templates">("editor");
+
 
   // Legacy Negative Prompt logic removed.
   // We keep the hook structure clean but remove the negative terms state.
@@ -561,30 +558,6 @@ const Index = () => {
               />
             </div>
           </div>
-
-          {/* Main View Switcher */}
-          <div className="flex justify-center mt-6">
-            <div className="bg-muted p-1 rounded-lg flex gap-1">
-              <Button
-                variant={activeView === "editor" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setActiveView("editor")}
-                className="gap-2 min-w-[120px]"
-              >
-                <PenTool className="h-4 w-4" />
-                Editor
-              </Button>
-              <Button
-                variant={activeView === "templates" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setActiveView("templates")}
-                className="gap-2 min-w-[120px]"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                Templates
-              </Button>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -663,161 +636,161 @@ const Index = () => {
             />
           </div>
         </div>
-        {activeView === "templates" ? (
-          <TemplatesView onLoadTemplate={handleLoadTemplate} />
-        ) : (
-          <Tabs value={activeProjectId} onValueChange={setActiveProjectId} className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <TabsList className="bg-muted">
-                {projects.map((project) => (
-                  <TabsTrigger
-                    key={project.id}
-                    value={project.id}
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                  >
-                    {project.name}
-                    {projects.length > 1 && (
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteProjectDialog({ open: true, projectId: project.id });
-                        }}
-                        className="ml-2 hover:text-destructive cursor-pointer inline-flex items-center"
-                        role="button"
-                        aria-label={t('deleteProject')}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </span>
-                    )}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {!showNewProject && (
-                <Button
-                  onClick={() => setShowNewProject(true)}
-                  variant="outline"
-                  size="sm"
-                  className="border-border"
+        <Tabs value={activeProjectId} onValueChange={setActiveProjectId} className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <TabsList className="bg-muted">
+              {projects.map((project) => (
+                <TabsTrigger
+                  key={project.id}
+                  value={project.id}
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('newProject')}
-                </Button>
-              )}
-            </div>
-
-            {showNewProject && (
-              <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
-                <div className="flex gap-2">
-                  <Input
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleAddProject()}
-                    placeholder="Projektname eingeben..."
-                    className="flex-1 border-border"
-                    autoFocus
-                  />
-                  <Button onClick={handleAddProject} className="bg-primary">
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t('add')}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowNewProject(false);
-                      setNewProjectName("");
-                    }}
-                    variant="outline"
-                  >
-                    {t('cancel')}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {projects.map((project) => (
-              <TabsContent key={project.id} value={project.id}>
-                {/* Categories Section */}
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-foreground">{t('categories')}</h2>
-                  {!showNewCategory && (
-                    <Button
-                      onClick={() => setShowNewCategory(true)}
-                      className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
+                  {project.name}
+                  {projects.length > 1 && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteProjectDialog({ open: true, projectId: project.id });
+                      }}
+                      className="ml-2 hover:text-destructive cursor-pointer inline-flex items-center"
+                      role="button"
+                      aria-label={t('deleteProject')}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t('newCategory')}
-                    </Button>
+                      <Trash2 className="h-3 w-3" />
+                    </span>
                   )}
-                </div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-                {showNewCategory && (
-                  <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
-                    <div className="flex gap-2">
-                      <Input
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
-                        placeholder="Kategoriename eingeben..."
-                        className="flex-1 border-border"
-                        autoFocus
-                      />
-                      <Button onClick={handleAddCategory} className="bg-primary">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Hinzufügen
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setShowNewCategory(false);
-                          setNewCategoryName("");
-                        }}
-                        variant="outline"
-                      >
-                        Abbrechen
-                      </Button>
-                    </div>
-                  </div>
-                )}
+            {!showNewProject && (
+              <Button
+                onClick={() => setShowNewProject(true)}
+                variant="outline"
+                size="sm"
+                className="border-border"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t('newProject')}
+              </Button>
+            )}
+          </div>
 
-                {/* Categories Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <DndContext
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEndCategory}
-                    sensors={useSensors(
-                      useSensor(PointerSensor, {
-                        activationConstraint: {
-                          distance: 8,
-                        },
-                      })
-                    )}
+          {showNewProject && (
+            <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
+              <div className="flex gap-2">
+                <Input
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleAddProject()}
+                  placeholder="Projektname eingeben..."
+                  className="flex-1 border-border"
+                  autoFocus
+                />
+                <Button onClick={handleAddProject} className="bg-primary">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('add')}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowNewProject(false);
+                    setNewProjectName("");
+                  }}
+                  variant="outline"
+                >
+                  {t('cancel')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {projects.map((project) => (
+            <TabsContent key={project.id} value={project.id}>
+              {/* ComfyUI Integration Section Removed */}
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-foreground">{t('categories')}</h2>
+                {!showNewCategory && (
+                  <Button
+                    onClick={() => setShowNewCategory(true)}
+                    className="bg-gradient-primary text-white shadow-glow hover:shadow-lg transition-all duration-300"
                   >
-                    <SortableContext
-                      items={project.categories.map((c) => c.id)}
-                      strategy={rectSortingStrategy}
-                    >
-                      {project.categories.map((category) => (
-                        <SortableCategoryCard
-                          key={category.id}
-                          category={category}
-                          onDeleteCategory={handleDeleteCategory}
-                          onOpenCategory={setOpenCategoryId}
-                        />
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-                </div>
-
-                {project.categories.length === 0 && (
-                  <div className="text-center py-16 text-muted-foreground">
-                    <Sparkles className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg">
-                      Erstelle deine erste Kategorie in "{project.name}"!
-                    </p>
-                  </div>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('newCategory')}
+                  </Button>
                 )}
-              </TabsContent>
-            ))}
-          </Tabs>
+              </div>
+
+              {showNewCategory && (
+                <div className="mb-6 p-4 bg-card rounded-lg border border-border shadow-card animate-scale-in">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
+                      placeholder="Kategoriename eingeben..."
+                      className="flex-1 border-border"
+                      autoFocus
+                    />
+                    <Button onClick={handleAddCategory} className="bg-primary">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Hinzufügen
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowNewCategory(false);
+                        setNewCategoryName("");
+                      }}
+                      variant="outline"
+                    >
+                      Abbrechen
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Categories Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <DndContext
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEndCategory}
+                  sensors={useSensors(
+                    useSensor(PointerSensor, {
+                      activationConstraint: {
+                        distance: 8,
+                      },
+                    })
+                  )}
+                >
+                  <SortableContext
+                    items={project.categories.map((c) => c.id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    {project.categories.map((category) => (
+                      <SortableCategoryCard
+                        key={category.id}
+                        category={category}
+                        onDeleteCategory={handleDeleteCategory}
+                        onOpenCategory={setOpenCategoryId}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              </div>
+
+              {project.categories.length === 0 && (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Sparkles className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">
+                    Erstelle deine erste Kategorie in "{project.name}"!
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+        <div className="pt-2 text-center">
+          <p className="text-xs text-muted-foreground">Prompt Weaver v3.1.0</p>
+        </div>
       </main>
 
       {
@@ -829,7 +802,7 @@ const Index = () => {
             onAddTerm={handleAddTerm}
             onRemoveTerm={handleRemoveTermFromCategory}
             onSelectTerm={handleTermClick}
-            selectedTerms={activePromptMode === "positive" ? selectedTerms : selectedNegativeTerms}
+            selectedTerms={selectedTerms}
             // onAddSubcategory={handleAddSubcategory} // Removed
             // onDeleteSubcategory={handleDeleteSubcategory} // Removed
             // onAddTermToSubcategory={handleAddTermToSubcategory} // Removed

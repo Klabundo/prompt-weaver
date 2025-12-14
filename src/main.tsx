@@ -3,4 +3,11 @@ import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
 
-createRoot(document.getElementById("root")!).render(<App />);
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+    console.error("Failed to find the root element. Make sure there is a <div id='root'></div> in your HTML.");
+    throw new Error("Root element not found");
+}
+
+createRoot(rootElement).render(<App />);
