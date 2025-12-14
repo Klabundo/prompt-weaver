@@ -10,6 +10,13 @@ import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { CommandPalette } from "@/components/CommandPalette";
+import { HistoryDialog } from "@/components/HistoryDialog";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { Undo, Redo } from "lucide-react";
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
+import { SortableCategoryCard } from "@/components/SortableCategoryCard";
 
 interface Term {
   text: string;
@@ -98,7 +105,15 @@ const Index = () => {
     const stored = localStorage.getItem("activeProjectId");
     return stored || projects[0]?.id || "";
   });
-  const [selectedTerms, setSelectedTerms] = useState<string[]>(() => {
+
+  const {
+    state: selectedTerms,
+    setState: setSelectedTerms,
+    undo,
+    redo,
+    canUndo,
+    canRedo
+  } = useUndoRedo<string[]>(() => {
     try {
       const stored = localStorage.getItem("selectedTerms");
       if (stored) {
@@ -112,6 +127,7 @@ const Index = () => {
     }
     return [];
   });
+
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -174,9 +190,9 @@ const Index = () => {
       projects.map((p) =>
         p.id === activeProjectId
           ? {
-              ...p,
-              categories: p.categories.filter((cat) => cat.id !== categoryId),
-            }
+            ...p,
+            categories: p.categories.filter((cat) => cat.id !== categoryId),
+          }
           : p
       )
     );
@@ -188,13 +204,13 @@ const Index = () => {
       projects.map((p) =>
         p.id === activeProjectId
           ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? { ...cat, terms: [...cat.terms, { text: term, image }] }
-                  : cat
-              ),
-            }
+            ...p,
+            categories: p.categories.map((cat) =>
+              cat.id === categoryId
+                ? { ...cat, terms: [...cat.terms, { text: term, image }] }
+                : cat
+            ),
+          }
           : p
       )
     );
@@ -206,68 +222,24 @@ const Index = () => {
       projects.map((p) =>
         p.id === activeProjectId
           ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? {
-                      ...cat,
-                      terms: cat.terms.filter((t) => t.text !== term),
-                    }
-                  : cat
-              ),
-            }
+            ...p,
+            categories: p.categories.map((cat) =>
+              cat.id === categoryId
+                ? {
+                  ...cat,
+                  terms: cat.terms.filter((t) => t.text !== term),
+                }
+                : cat
+            ),
+          }
           : p
       )
     );
     setSelectedTerms(selectedTerms.filter((t) => t !== term));
   };
 
-  const handleAddSubcategory = (categoryId: string, name: string) => {
-    setProjects(
-      projects.map((p) =>
-        p.id === activeProjectId
-          ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? {
-                      ...cat,
-                      subcategories: [
-                        ...(cat.subcategories || []),
-                        { id: Date.now().toString(), name, terms: [] },
-                      ],
-                    }
-                  : cat
-              ),
-            }
-          : p
-      )
-    );
-    toast.success(t('subcategoryAdded'));
-  };
-
-  const handleDeleteSubcategory = (categoryId: string, subcategoryId: string) => {
-    setProjects(
-      projects.map((p) =>
-        p.id === activeProjectId
-          ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? {
-                      ...cat,
-                      subcategories: (cat.subcategories || []).filter(
-                        (sub) => sub.id !== subcategoryId
-                      ),
-                    }
-                  : cat
-              ),
-            }
-          : p
-      )
-    );
-    toast.success(t('subcategoryDeleted'));
-  };
+  // handleAddSubcategory removed
+  // handleDeleteSubcategory removed
 
   // Rename Category
   const handleRenameCategory = (categoryId: string, newName: string) => {
@@ -275,11 +247,11 @@ const Index = () => {
       projects.map((p) =>
         p.id === activeProjectId
           ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId ? { ...cat, name: newName } : cat
-              ),
-            }
+            ...p,
+            categories: p.categories.map((cat) =>
+              cat.id === categoryId ? { ...cat, name: newName } : cat
+            ),
+          }
           : p
       )
     );
@@ -291,18 +263,18 @@ const Index = () => {
       projects.map((p) =>
         p.id === activeProjectId
           ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? {
-                      ...cat,
-                      terms: cat.terms.map((t) =>
-                        t.text === oldText ? { text: newText, image: newImage } : t
-                      ),
-                    }
-                  : cat
-              ),
-            }
+            ...p,
+            categories: p.categories.map((cat) =>
+              cat.id === categoryId
+                ? {
+                  ...cat,
+                  terms: cat.terms.map((t) =>
+                    t.text === oldText ? { text: newText, image: newImage } : t
+                  ),
+                }
+                : cat
+            ),
+          }
           : p
       )
     );
@@ -312,103 +284,9 @@ const Index = () => {
     }
   };
 
-  // Edit term inside a subcategory
-  const handleEditTermInSubcategory = (
-    categoryId: string,
-    subcategoryId: string,
-    oldText: string,
-    newText: string,
-    newImage?: string
-  ) => {
-    setProjects(
-      projects.map((p) =>
-        p.id === activeProjectId
-          ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? {
-                      ...cat,
-                      subcategories: (cat.subcategories || []).map((sub) =>
-                        sub.id === subcategoryId
-                          ? {
-                              ...sub,
-                              terms: sub.terms.map((t) =>
-                                t.text === oldText ? { text: newText, image: newImage } : t
-                              ),
-                            }
-                          : sub
-                      ),
-                    }
-                  : cat
-              ),
-            }
-          : p
-      )
-    );
-    if (oldText !== newText) {
-      setSelectedTerms((prev) => prev.map((t) => (t === oldText ? newText : t)));
-    }
-  };
-
-  const handleAddTermToSubcategory = (
-    categoryId: string,
-    subcategoryId: string,
-    term: string,
-    image?: string
-  ) => {
-    setProjects(
-      projects.map((p) =>
-        p.id === activeProjectId
-          ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? {
-                      ...cat,
-                      subcategories: (cat.subcategories || []).map((sub) =>
-                        sub.id === subcategoryId
-                          ? { ...sub, terms: [...sub.terms, { text: term, image }] }
-                          : sub
-                      ),
-                    }
-                  : cat
-              ),
-            }
-          : p
-      )
-    );
-    toast.success(t('termAddedToSubcategory'));
-  };
-
-  const handleRemoveTermFromSubcategory = (
-    categoryId: string,
-    subcategoryId: string,
-    term: string
-  ) => {
-    setProjects(
-      projects.map((p) =>
-        p.id === activeProjectId
-          ? {
-              ...p,
-              categories: p.categories.map((cat) =>
-                cat.id === categoryId
-                  ? {
-                      ...cat,
-                      subcategories: (cat.subcategories || []).map((sub) =>
-                        sub.id === subcategoryId
-                          ? { ...sub, terms: sub.terms.filter((t) => t.text !== term) }
-                          : sub
-                      ),
-                    }
-                  : cat
-              ),
-            }
-          : p
-      )
-    );
-    setSelectedTerms(selectedTerms.filter((t) => t !== term));
-  };
+  // handleEditTermInSubcategory removed
+  // handleAddTermToSubcategory removed
+  // handleRemoveTermFromSubcategory removed
 
   const handleSelectTerm = (term: string) => {
     if (selectedTerms.includes(term)) {
@@ -421,6 +299,47 @@ const Index = () => {
   const handleClearSelection = () => {
     setSelectedTerms([]);
     toast.success(t('selectionCleared'));
+  };
+
+  const handleDragEndCategory = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (active.id !== over?.id && activeProject) {
+      const oldIndex = activeProject.categories.findIndex((cat) => cat.id === active.id);
+      const newIndex = activeProject.categories.findIndex((cat) => cat.id === over?.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setProjects(
+          projects.map((p) =>
+            p.id === activeProjectId
+              ? {
+                ...p,
+                categories: arrayMove(p.categories, oldIndex, newIndex),
+              }
+              : p
+          )
+        );
+      }
+    }
+  };
+
+  const handleReorderTerms = (categoryId: string, oldIndex: number, newIndex: number) => {
+    setProjects(
+      projects.map((p) =>
+        p.id === activeProjectId
+          ? {
+            ...p,
+            categories: p.categories.map((cat) =>
+              cat.id === categoryId
+                ? {
+                  ...cat,
+                  terms: arrayMove(cat.terms, oldIndex, newIndex),
+                }
+                : cat
+            ),
+          }
+          : p
+      )
+    );
   };
 
   const handleExportData = () => {
@@ -542,11 +461,32 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <SettingsDialog 
-              onExport={handleExportData}
-              onImport={handleImportData}
-              onClearData={handleClearAllData}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={undo}
+                disabled={!canUndo}
+                title="Undo"
+              >
+                <Undo className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={redo}
+                disabled={!canRedo}
+                title="Redo"
+              >
+                <Redo className="h-4 w-4" />
+              </Button>
+              <HistoryDialog />
+              <SettingsDialog
+                onExport={handleExportData}
+                onImport={handleImportData}
+                onClearData={handleClearAllData}
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -557,6 +497,8 @@ const Index = () => {
           <PromptPreview
             selectedTerms={selectedTerms}
             onClear={handleClearSelection}
+            onRemoveTerm={(term) => handleSelectTerm(term)}
+            onReorder={setSelectedTerms}
           />
         </div>
 
@@ -675,14 +617,31 @@ const Index = () => {
 
               {/* Categories Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {project.categories.map((category) => (
-                  <CategoryCard
-                    key={category.id}
-                    category={category}
-                    onDeleteCategory={handleDeleteCategory}
-                    onOpenCategory={setOpenCategoryId}
-                  />
-                ))}
+                <DndContext
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEndCategory}
+                  sensors={useSensors(
+                    useSensor(PointerSensor, {
+                      activationConstraint: {
+                        distance: 8,
+                      },
+                    })
+                  )}
+                >
+                  <SortableContext
+                    items={project.categories.map((c) => c.id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    {project.categories.map((category) => (
+                      <SortableCategoryCard
+                        key={category.id}
+                        category={category}
+                        onDeleteCategory={handleDeleteCategory}
+                        onOpenCategory={setOpenCategoryId}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               </div>
 
               {project.categories.length === 0 && (
@@ -713,7 +672,8 @@ const Index = () => {
           // onRemoveTermFromSubcategory={handleRemoveTermFromSubcategory} // Removed
           onRenameCategory={handleRenameCategory}
           onEditTerm={handleEditTerm}
-          // onEditTermInSubcategory={handleEditTermInSubcategory} // Removed
+          onReorderTerms={handleReorderTerms}
+        // onEditTermInSubcategory={handleEditTermInSubcategory} // Removed
         />
       )}
 
@@ -727,9 +687,17 @@ const Index = () => {
           setDeleteProjectDialog({ open: false });
         }}
         title="Projekt löschen?"
-        description={`Möchtest du das Projekt "${
-          projects.find((p) => p.id === deleteProjectDialog.projectId)?.name
-        }" wirklich löschen? Alle Kategorien und Begriffe gehen verloren.`}
+        description={`Möchtest du das Projekt "${projects.find((p) => p.id === deleteProjectDialog.projectId)?.name
+          }" wirklich löschen? Alle Kategorien und Begriffe gehen verloren.`}
+      />
+
+      <CommandPalette
+        projects={projects}
+        onSelectTerm={handleSelectTerm}
+        onSelectCategory={(pid, cid) => {
+          setActiveProjectId(pid);
+          setOpenCategoryId(cid);
+        }}
       />
     </div>
   );

@@ -13,8 +13,9 @@ import { AddTermDialog } from "./AddTermDialog";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { Input } from "@/components/ui/input";
 import { SubcategoryView } from "./SubcategoryView";
-import { DndContext, DragEndEvent } from "@dnd-kit/core";
-import { DroppableSubcategoryCard } from "./DroppableSubcategoryCard";
+import { DndContext, DragEndEvent, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
+import { SortableTermCard } from "./SortableTermCard";
 import { toast } from "sonner";
 import { DraggableTermCard } from "./DraggableTermCard";
 import { EditTermDialog } from "./EditTermDialog";
@@ -39,6 +40,7 @@ interface CategoryDetailDialogProps {
   selectedTerms: string[];
   onRenameCategory?: (categoryId: string, newName: string) => void;
   onEditTerm?: (categoryId: string, oldText: string, newText: string, newImage?: string) => void;
+  onReorderTerms?: (categoryId: string, oldIndex: number, newIndex: number) => void;
 }
 
 export const CategoryDetailDialog = ({
@@ -51,6 +53,7 @@ export const CategoryDetailDialog = ({
   selectedTerms,
   onRenameCategory,
   onEditTerm,
+  onReorderTerms,
 }: CategoryDetailDialogProps) => {
   const { t } = useTranslation();
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -65,6 +68,17 @@ export const CategoryDetailDialog = ({
   const [editInitialText, setEditInitialText] = useState<string>("");
   const [editInitialImage, setEditInitialImage] = useState<string | undefined>(undefined);
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (active.id !== over?.id && onReorderTerms) {
+      const oldIndex = category.terms.findIndex((t) => t.text === active.id);
+      const newIndex = category.terms.findIndex((t) => t.text === over?.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        onReorderTerms(category.id, oldIndex, newIndex);
+      }
+    }
+  };
+
   const renderMainContent = () => {
     return (
       <div>
@@ -75,23 +89,38 @@ export const CategoryDetailDialog = ({
             <p className="text-sm mt-2">{t('addTermDescription')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {category.terms.map((term) => (
-              <DraggableTermCard
-                key={term.text}
-                term={term}
-                isSelected={selectedTerms.includes(term.text)}
-                onSelect={() => onSelectTerm(term.text)}
-                onDelete={() => setDeleteDialog({ open: true, term: term.text })}
-                isDragEnabled={false}
-                onEdit={() => {
-                  setEditInitialText(term.text);
-                  setEditInitialImage(term.image);
-                  setEditDialogOpen(true);
-                }}
-              />
-            ))}
-          </div>
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            sensors={useSensors(
+              useSensor(PointerSensor, {
+                activationConstraint: {
+                  distance: 8,
+                },
+              })
+            )}
+          >
+            <SortableContext items={category.terms.map(t => t.text)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {category.terms.map((term) => (
+                  <SortableTermCard
+                    key={term.text}
+                    id={term.text}
+                    term={term}
+                    isSelected={selectedTerms.includes(term.text)}
+                    onSelect={() => onSelectTerm(term.text)}
+                    onDelete={() => setDeleteDialog({ open: true, term: term.text })}
+                    isDragEnabled={true}
+                    onEdit={() => {
+                      setEditInitialText(term.text);
+                      setEditInitialImage(term.image);
+                      setEditDialogOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     );

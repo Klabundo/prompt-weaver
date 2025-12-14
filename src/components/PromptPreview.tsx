@@ -1,27 +1,62 @@
+import { addToHistory } from "./HistoryDialog";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableTag } from "./SortableTag";
+import { DroppableArea } from "./DroppableArea";
 
 interface PromptPreviewProps {
   selectedTerms: string[];
   onClear: () => void;
+  onRemoveTerm?: (term: string) => void;
+  onReorder?: (newOrder: string[]) => void;
 }
 
-export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) => {
+export const PromptPreview = ({ selectedTerms, onClear, onRemoveTerm, onReorder }: PromptPreviewProps) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
 
   const prompt = selectedTerms.join(", ");
 
   const handleCopy = () => {
     if (prompt) {
       navigator.clipboard.writeText(prompt);
+      addToHistory(prompt);
       setCopied(true);
       toast.success(t('promptCopied'));
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id && onReorder) {
+      const oldIndex = selectedTerms.indexOf(active.id.toString());
+      const newIndex = selectedTerms.indexOf(over.id.toString());
+      onReorder(arrayMove(selectedTerms, oldIndex, newIndex));
     }
   };
 
@@ -36,8 +71,9 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
                 onClick={onClear}
                 variant="outline"
                 size="sm"
-                className="border-border"
+                className="border-border hover:bg-destructive/10 hover:text-destructive"
               >
+                <Trash2 className="h-4 w-4 mr-2" />
                 {t('clearSelection')}
               </Button>
               <Button
@@ -63,10 +99,28 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
       </div>
 
       <div className="bg-card rounded-lg p-4 min-h-[100px] border border-border">
-        {prompt ? (
-          <p className="text-foreground font-mono text-sm leading-relaxed animate-fade-in">
-            {prompt}
-          </p>
+        {selectedTerms.length > 0 ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={selectedTerms}
+              strategy={rectSortingStrategy}
+            >
+              <DroppableArea id="prompt-tags">
+                {selectedTerms.map((term) => (
+                  <SortableTag
+                    key={term}
+                    id={term}
+                    text={term}
+                    onRemove={(t) => onRemoveTerm?.(t)}
+                  />
+                ))}
+              </DroppableArea>
+            </SortableContext>
+          </DndContext>
         ) : (
           <p className="text-muted-foreground text-sm italic">
             {t('selectedTermsDescription')}
@@ -75,8 +129,13 @@ export const PromptPreview = ({ selectedTerms, onClear }: PromptPreviewProps) =>
       </div>
 
       {selectedTerms.length > 0 && (
-        <div className="mt-4 text-xs text-muted-foreground">
-          {selectedTerms.length} {selectedTerms.length === 1 ? t('termCount') : t('termCountPlural')} {t('selected')}
+        <div className="mt-4 flex justify-between items-center">
+          <div className="text-xs text-muted-foreground">
+            {selectedTerms.length} {selectedTerms.length === 1 ? t('termCount') : t('termCountPlural')} {t('selected')}
+          </div>
+          <div className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded select-all">
+            {prompt}
+          </div>
         </div>
       )}
     </Card>
