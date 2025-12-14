@@ -1,27 +1,58 @@
 import os
+import shutil
+import folder_paths
 import server
-import aiohttp
 from aiohttp import web
-from .PromptWeaverNode import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 
-# Define the path to the 'dist' folder (React App Build)
-WEB_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "dist"))
+# ----------------------------------------------------------------------------
+# 1. Setup Paths
+# ----------------------------------------------------------------------------
+CURRENT_DIR = os.path.dirname(__file__)
+WEB_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "dist"))
+Js_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "web", "comfyui"))
 
-print(f"🔍 PromptWeaver Debug: Calculated WEB_ROOT as: {WEB_ROOT}")
+print(f"\n[PromptWeaver] ---------------------------------------------")
+print(f"[PromptWeaver] Initializing...")
+print(f"[PromptWeaver] Root Path: {CURRENT_DIR}")
+print(f"[PromptWeaver] Web Root (Dist): {WEB_ROOT}")
+print(f"[PromptWeaver] JS Root: {Js_DIR}")
 
-# Register the static route to serve the React App
-# This makes http://comfyui-address/prompt_weaver_app/ serve the index.html
-if os.path.exists(WEB_ROOT) and os.path.isdir(WEB_ROOT):
-    server.PromptServer.instance.app.router.add_static("/prompt_weaver_app", WEB_ROOT, follow_symlinks=True)
-    print(f"🟢 PromptWeaver: Serving Web App from {WEB_ROOT}")
-    print(f"   -> URL should be: /prompt_weaver_app/index.html")
-else:
-    print(f"🔴 PromptWeaver ERROR: 'dist' folder NOT found at {WEB_ROOT}")
-    print(f"   -> Current working directory: {os.getcwd()}")
-    print(f"   -> Directory content of module root: {os.listdir(os.path.dirname(__file__))}")
+# ----------------------------------------------------------------------------
+# 2. Setup Static Routes (The 404 Fix)
+# ----------------------------------------------------------------------------
+def setup_routes():
+    try:
+        if os.path.exists(WEB_ROOT) and os.path.isdir(WEB_ROOT):
+             # Ensure we have an index.html
+            index_path = os.path.join(WEB_ROOT, "index.html")
+            if os.path.exists(index_path):
+                # Register the ALL-CATCHING static route for the app
+                server.PromptServer.instance.app.router.add_static("/prompt_weaver_app", WEB_ROOT, follow_symlinks=True)
+                print(f"[PromptWeaver] 🟢 SUCCESS: Static route '/prompt_weaver_app' registered -> {WEB_ROOT}")
+            else:
+                print(f"[PromptWeaver] 🔴 ERROR: 'dist' exists but no 'index.html' found inside!")
+        else:
+             print(f"[PromptWeaver] 🔴 ERROR: 'dist' folder NOT found. Did you run 'npm run build'?")
+    except Exception as e:
+        print(f"[PromptWeaver] 🔴 EXCEPTION during route setup: {e}")
 
-# This tells ComfyUI where to find our JS extension (prompt_weaver.js)
+setup_routes()
+
+# ----------------------------------------------------------------------------
+# 3. Load Nodes
+# ----------------------------------------------------------------------------
+try:
+    from .PromptWeaverNode import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+    print(f"[PromptWeaver] 🟢 Nodes loaded successfully.")
+except ImportError as e:
+    print(f"[PromptWeaver] 🔴 Failed to import nodes: {e}")
+    NODE_CLASS_MAPPINGS = {}
+    NODE_DISPLAY_NAME_MAPPINGS = {}
+
+# ----------------------------------------------------------------------------
+# 4. Export WEB_DIRECTORY for JS loading
+# ----------------------------------------------------------------------------
 WEB_DIRECTORY = "./web/comfyui"
-
-print("🟢 PromptWeaver Node: Loaded successfully!")
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
+
+print(f"[PromptWeaver] ---------------------------------------------\n")
