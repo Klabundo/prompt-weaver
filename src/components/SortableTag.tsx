@@ -73,7 +73,7 @@ export const SortableTag = ({ id, text, onRemove, onUpdate }: SortableTagProps) 
               handleWeightChange(0.1);
             }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="h-3 w-3 flex items-center justify-center hover:bg-muted rounded text-[8px]"
+            className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded text-[10px] font-bold"
           >
             +
           </button>
@@ -83,7 +83,7 @@ export const SortableTag = ({ id, text, onRemove, onUpdate }: SortableTagProps) 
               handleWeightChange(-0.1);
             }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="h-3 w-3 flex items-center justify-center hover:bg-muted rounded text-[8px]"
+            className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded text-[10px] font-bold"
           >
             -
           </button>
